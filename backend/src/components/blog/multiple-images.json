@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_blog_multiple_images",
+  "info": {
+    "displayName": "MultipleImages"
+  },
+  "options": {},
+  "attributes": {
+    "images": {
+      "type": "media",
+      "multiple": true,
+      "required": true,
+      "allowedTypes": [
+        "images"
+      ]
+    }
+  },
+  "config": {}
+}

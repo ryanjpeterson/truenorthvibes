@@ -1,0 +1,14 @@
+{
+  "collectionName": "components_blog_you_tube_embeds",
+  "info": {
+    "displayName": "YouTubeEmbed"
+  },
+  "options": {},
+  "attributes": {
+    "url": {
+      "type": "text",
+      "required": true
+    }
+  },
+  "config": {}
+}

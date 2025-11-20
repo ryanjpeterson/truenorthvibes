@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_blog_single_images",
+  "info": {
+    "displayName": "SingleImage"
+  },
+  "options": {},
+  "attributes": {
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "images"
+      ]
+    }
+  },
+  "config": {}
+}
