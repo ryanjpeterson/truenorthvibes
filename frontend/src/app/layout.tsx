@@ -16,7 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // Updated lang attribute to Canadian English
+    <html lang="en-CA">
       <body className={`${inter.className} bg-gray-50 min-h-screen`}>
         <Navbar />
         <main>{children}</main>
