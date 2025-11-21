@@ -49,10 +49,10 @@ export default async function Home() {
                 </div>
                 <div className="flex-1 p-6 flex flex-col">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-indigo-600 mb-2">
+                    <p className="text-sm font-medium text-blue-600 mb-2">
                       {post.date ? format(parseISO(post.date), 'MMMM d, yyyy') : ''}
                     </p>
-                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                       {post.title}
                     </h3>
                   </div>

@@ -37,7 +37,7 @@ export default function BlockRenderer({ block }: { block: Block }) {
               link: ({ children, url }) => (
                 <Link 
                   href={url} 
-                  className="text-indigo-600 hover:text-indigo-800 hover:underline"
+                  className="text-blue-600 hover:text-blue-800 hover:underline"
                 >
                   {children}
                 </Link>
