@@ -6,6 +6,22 @@ export interface StrapiImage {
   height: number;
 }
 
+export interface Sponsor {
+  id: number;
+  documentId: string;
+  name: string;
+  description?: string;
+  url?: string;
+  icon: StrapiImage;
+}
+
+export interface Category {
+  id: number;
+  documentId: string;
+  name: string;
+  description: string;
+}
+
 export interface Block {
   __component: string;
   id: number;
@@ -28,4 +44,6 @@ export interface Post {
   date: string; // 'YYYY-MM-DD' based on type: 'date'
   thumbnail: StrapiImage;
   body?: Block[];
+  sponsors?: Sponsor[];
+  categories?: Category[];
 }

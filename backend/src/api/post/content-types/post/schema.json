@@ -12,7 +12,8 @@
   "pluginOptions": {},
   "attributes": {
     "title": {
-      "type": "text",
+      "type": "string",
+      "maxLength": 100,
       "required": true
     },
     "slug": {
@@ -43,10 +44,17 @@
         "images"
       ]
     },
-    "sponsor": {
+    "sponsors": {
       "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::sponsor.sponsor"
+      "relation": "manyToMany",
+      "target": "api::sponsor.sponsor",
+      "inversedBy": "posts"
+    },
+    "categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category",
+      "mappedBy": "posts"
     }
   }
 }

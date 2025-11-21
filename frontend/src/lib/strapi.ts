@@ -16,6 +16,13 @@ export function getStrapiInternalURL(path = '') {
 }
 
 async function fetchAPI(path: string, urlParamsObject = {}, options = {}) {
+  // Build the request URL
+  const queryString = qs.stringify(urlParamsObject, { encodeValuesOnly: true });
+  // Determine if we are running on the server or client
+  const isServer = typeof window === 'undefined';
+  const baseUrl = isServer ? getStrapiInternalURL() : getStrapiURL();
+  const requestUrl = `${baseUrl}/api${path}${queryString ? `?${queryString}` : ''}`;
+
   try {
     const mergedOptions = {
       headers: {
@@ -24,25 +31,24 @@ async function fetchAPI(path: string, urlParamsObject = {}, options = {}) {
       ...options,
     };
 
-    const queryString = qs.stringify(urlParamsObject, { encodeValuesOnly: true });
-    
-    // Determine if we are running on the server or client
-    const isServer = typeof window === 'undefined';
-    const baseUrl = isServer ? getStrapiInternalURL() : getStrapiURL();
-    
-    const requestUrl = `${baseUrl}/api${path}${queryString ? `?${queryString}` : ''}`;
-
     const response = await fetch(requestUrl, mergedOptions);
 
     if (!response.ok) {
-      throw new Error(`Error fetching from Strapi: ${response.statusText}`);
+      // Capture the error details from the response body if possible
+      const errorText = await response.text();
+      console.error(`🚨 Strapi API Error (${response.status}) at ${requestUrl}:`, errorText);
+      throw new Error(`Strapi Error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Fetch API Error:', error);
-    throw new Error('Failed to fetch data from Strapi');
+    // Re-throw the error with context so we can see it in the Next.js build output
+    console.error('❌ Fetch API Execution Error:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('An unexpected error occurred while fetching from Strapi');
   }
 }
 
@@ -54,6 +60,18 @@ export async function getPosts() {
     populate: {
       thumbnail: {
         fields: ['url', 'alternativeText', 'width', 'height'],
+      },
+      // Add Categories population for the Home Page
+      categories: {
+        fields: ['name', 'description'],
+      },
+      sponsors: {
+        fields: ['name'],
+        populate: {
+          icon: {
+            fields: ['url', 'alternativeText', 'width', 'height'],
+          },
+        },
       },
     },
   };
@@ -84,6 +102,18 @@ export async function getPostBySlug(slug: string) {
     populate: {
       thumbnail: {
         fields: ['url', 'alternativeText', 'width', 'height'],
+      },
+      // Add Categories population
+      categories: {
+        fields: ['name', 'description'],
+      },
+      sponsors: {
+        fields: ['name', 'description'], 
+        populate: {
+          icon: {
+            fields: ['url', 'alternativeText', 'width', 'height'],
+          },
+        },
       },
       body: {
         on: {

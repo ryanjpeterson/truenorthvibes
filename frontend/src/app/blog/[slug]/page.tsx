@@ -6,8 +6,7 @@ import BlockRenderer from '@/app/components/BlockRenderer';
 import { format, parseISO } from 'date-fns';
 import { Post, Block } from '@/types';
 
-// 📌 ISR: Revalidate this page every 60 seconds
-// This allows the page to be static (fast) but update with new content/edits automatically.
+// 📌 ISR: Revalidate this page every 1 second
 export const revalidate = 1;
 
 // 1. SSG: Generate static params for all slugs
@@ -82,6 +81,10 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     ? (thumbnail.url.startsWith('http') ? thumbnail.url : getStrapiURL(thumbnail.url))
     : null;
 
+  // Resolve Data
+  const sponsors = post.sponsors;
+  const categories = post.categories;
+
   return (
     <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <header className="mb-10 text-center">
@@ -101,9 +104,67 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           {post.title}
         </h1>
         {post.date && (
-          <time className="text-gray-500 text-lg">
+          <time className="text-gray-500 text-lg block mb-4">
             {format(parseISO(post.date), 'MMMM d, yyyy')}
           </time>
+        )}
+
+        {/* Categories (Blue Buttons) */}
+        {categories && categories.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2 mb-6">
+            {categories.map((category) => (
+              <span 
+                key={category.id} 
+                className="inline-block bg-blue-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full hover:bg-blue-700 transition-colors cursor-default"
+              >
+                {category.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Sponsors Block - Loop through all sponsors */}
+        {sponsors && sponsors.length > 0 && (
+          <div className="flex flex-col gap-6 mt-8">
+            {sponsors.map(sponsor => {
+               const sponsorIconUrl = sponsor.icon?.url
+                 ? (sponsor.icon.url.startsWith('http') ? sponsor.icon.url : getStrapiURL(sponsor.icon.url))
+                 : null;
+
+               return (
+                <div key={sponsor.id} className="bg-gray-50 border border-gray-200 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-4 w-full text-left">
+                  {sponsorIconUrl && (
+                    <div className="relative w-16 h-16 flex-shrink-0 bg-white rounded-full overflow-hidden shadow-sm border border-gray-100">
+                      <Image 
+                        src={sponsorIconUrl} 
+                        alt={sponsor.name} 
+                        fill 
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
+                      <span>Sponsored by {sponsor.name}</span>
+                    </div>
+                    {sponsor.description && (
+                      <p className="text-gray-600 text-sm mb-2">{sponsor.description}</p>
+                    )}
+                    {sponsor.url && (
+                      <a 
+                        href={sponsor.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 text-sm font-medium hover:text-blue-800 hover:underline"
+                      >
+                        Visit Website &rarr;
+                      </a>
+                    )}
+                  </div>
+                </div>
+               );
+            })}
+          </div>
         )}
       </header>
 

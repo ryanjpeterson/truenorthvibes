@@ -7,7 +7,7 @@
     "displayName": "Sponsors"
   },
   "options": {
-    "draftAndPublish": true
+    "draftAndPublish": false
   },
   "pluginOptions": {},
   "attributes": {
@@ -28,6 +28,12 @@
     },
     "description": {
       "type": "string"
+    },
+    "posts": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::post.post",
+      "mappedBy": "sponsors"
     }
   }
 }
