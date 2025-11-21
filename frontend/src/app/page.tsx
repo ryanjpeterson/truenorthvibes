@@ -81,15 +81,15 @@ export default async function Home() {
                   
                   {/* Sponsors Display Loop */}
                   {sponsors && sponsors.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-2">
+                    <div className="mt-4 pt-4 flex flex-col gap-2">
                       {sponsors.map(sponsor => {
                         const sponsorIconUrl = sponsor.icon?.url
                           ? (sponsor.icon.url.startsWith('http') ? sponsor.icon.url : getStrapiURL(sponsor.icon.url))
                           : null;
                         
                         return (
-                          <div key={sponsor.id} className="flex items-center">
-                            <div className="relative w-6 h-6 mr-2 flex-shrink-0 rounded-full overflow-hidden">
+                          <div key={sponsor.id} className="flex items-center bg-blue-50 border border-blue-100 rounded-lg p-2">
+                            <div className="relative w-6 h-6 mr-2 flex-shrink-0 rounded-full overflow-hidden bg-white">
                               {sponsorIconUrl && (
                                 <Image 
                                   src={sponsorIconUrl} 
@@ -116,4 +116,3 @@ export default async function Home() {
     </div>
   );
 }
-

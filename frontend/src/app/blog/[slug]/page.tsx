@@ -143,7 +143,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                  : null;
 
                return (
-                // Changed bg-gray-50 to bg-blue-50 and border-gray-200 to border-blue-100
+                // Updated classes to use light blue background and blue border
                 <div key={sponsor.id} className="bg-blue-50 border border-blue-100 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-4 w-full text-left">
                   {sponsorIconUrl && (
                     <div className="relative w-16 h-16 flex-shrink-0 bg-white rounded-full overflow-hidden shadow-sm border border-gray-100">
