@@ -100,28 +100,39 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
             />
           </div>
         )}
-        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
-          {post.title}
-        </h1>
-        {post.date && (
-          <time className="text-gray-500 text-lg block mb-4">
-            {format(parseISO(post.date), 'MMMM d, yyyy')}
-          </time>
-        )}
 
-        {/* Categories (Blue Buttons) */}
-        {categories && categories.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
-            {categories.map((category) => (
-              <span 
-                key={category.id} 
-                className="inline-block bg-blue-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full hover:bg-blue-700 transition-colors cursor-default"
-              >
-                {category.name}
-              </span>
-            ))}
+        {/* Header Content: Title (Left) vs Date/Categories (Right) */}
+        <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8 text-left border-b border-gray-100 pb-8">
+          {/* Left: Title */}
+          <div className="flex-1">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+              {post.title}
+            </h1>
           </div>
-        )}
+
+          {/* Right: Date & Categories */}
+          <div className="flex flex-col items-start md:items-end flex-shrink-0 gap-2">
+            {post.date && (
+              <time className="text-gray-500 text-lg font-medium">
+                {format(parseISO(post.date), 'MMMM d, yyyy')}
+              </time>
+            )}
+            
+            {/* Categories (Blue Buttons) - Stacked */}
+            {categories && categories.length > 0 && (
+              <div className="flex flex-wrap justify-end gap-2 mt-1">
+                {categories.map((category) => (
+                  <span 
+                    key={category.id} 
+                    className="inline-block bg-blue-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full hover:bg-blue-700 transition-colors cursor-default"
+                  >
+                    {category.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Sponsors Block - Loop through all sponsors */}
         {sponsors && sponsors.length > 0 && (
@@ -132,7 +143,8 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                  : null;
 
                return (
-                <div key={sponsor.id} className="bg-gray-50 border border-gray-200 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-4 w-full text-left">
+                // Changed bg-gray-50 to bg-blue-50 and border-gray-200 to border-blue-100
+                <div key={sponsor.id} className="bg-blue-50 border border-blue-100 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-4 w-full text-left">
                   {sponsorIconUrl && (
                     <div className="relative w-16 h-16 flex-shrink-0 bg-white rounded-full overflow-hidden shadow-sm border border-gray-100">
                       <Image 
