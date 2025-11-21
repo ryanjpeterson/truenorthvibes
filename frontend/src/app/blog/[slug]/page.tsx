@@ -89,7 +89,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <header className="mb-10 text-center">
         {heroUrl && (
-          <div className="relative w-full aspect-[2/1] mb-8 rounded-xl overflow-hidden shadow-lg">
+          <div className="relative w-full aspect-[2/1] mb-8 rounded-2xl overflow-hidden shadow-lg">
             <Image
               src={heroUrl}
               alt={thumbnail?.alternativeText || post.title}
@@ -102,7 +102,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
         )}
 
         {/* Header Content: Title (Left) vs Date/Categories (Right) */}
-        <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8 text-left border-b border-gray-100 pb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8 text-left">
           {/* Left: Title */}
           <div className="flex-1">
             <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
@@ -124,7 +124,8 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                 {categories.map((category) => (
                   <span 
                     key={category.id} 
-                    className="inline-block bg-blue-600 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full hover:bg-blue-700 transition-colors cursor-default"
+                    // Updated styling: rounded-md, removed shadow-sm
+                    className="w-24 px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 border flex justify-center items-center bg-blue-50 text-blue-600 border-blue-200 cursor-default"
                   >
                     {category.name}
                   </span>
@@ -143,7 +144,6 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                  : null;
 
                return (
-                // Updated classes to use light blue background and blue border
                 <div key={sponsor.id} className="bg-blue-50 border border-blue-100 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-4 w-full text-left">
                   {sponsorIconUrl && (
                     <div className="relative w-16 h-16 flex-shrink-0 bg-white rounded-full overflow-hidden shadow-sm border border-gray-100">
@@ -156,7 +156,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                     </div>
                   )}
                   <div className="flex-1">
-                    <div className="font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <div className="font-bold text-blue-600 mb-1 flex items-center gap-2">
                       <span>Sponsored by {sponsor.name}</span>
                     </div>
                     {sponsor.description && (
@@ -167,7 +167,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                         href={sponsor.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-blue-600 text-sm font-medium hover:text-blue-800 hover:underline"
+                        className="text-blue-600 text-sm font-medium hover:text-blue-600 hover:underline"
                       >
                         Visit Website &rarr;
                       </a>

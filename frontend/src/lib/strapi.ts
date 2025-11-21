@@ -1,5 +1,4 @@
 import qs from 'qs';
-import { Post, Home } from '@/types';
 
 // Public URL: Used by the browser (e.g., http://localhost:1337 or https://my-site.com)
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://127.0.0.1:1337';
@@ -156,5 +155,15 @@ export async function getHomeData() {
     },
   };
   const res = await fetchAPI('/home', query);
+  return res.data;
+}
+
+// 5. Get All Categories
+export async function getCategories() {
+  const query = {
+    fields: ['name', 'description'],
+    sort: ['name:asc'],
+  };
+  const res = await fetchAPI('/categories', query);
   return res.data;
 }
