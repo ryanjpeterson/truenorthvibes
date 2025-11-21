@@ -20,7 +20,7 @@ export default function Navbar() {
             {!isHomePage && (
               <Link 
                 href="/" 
-                className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-gray-600 hover:text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
               >
                 All Posts
               </Link>

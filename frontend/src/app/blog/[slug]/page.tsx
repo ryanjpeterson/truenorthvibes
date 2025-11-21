@@ -89,7 +89,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
     <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <header className="mb-10 text-center">
         {heroUrl && (
-          <div className="relative w-full aspect-[2/1] mb-8 rounded-2xl overflow-hidden shadow-lg">
+          <div className="relative w-full aspect-[2/1] mb-8 rounded-xl overflow-hidden shadow-lg">
             <Image
               src={heroUrl}
               alt={thumbnail?.alternativeText || post.title}

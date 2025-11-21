@@ -23,7 +23,7 @@ export default async function Home() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       
       {/* Hero Section */}
-      <header className="relative text-center mb-16 rounded-3xl overflow-hidden h-[400px] flex items-center justify-center">
+      <header className="relative text-center mb-16 rounded-xl overflow-hidden h-[400px] flex items-center justify-center">
         {/* Background Image */}
         {heroImageUrl && (
           <Image
