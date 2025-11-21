@@ -4,8 +4,8 @@ import { getPosts, getStrapiURL } from '@/lib/strapi';
 import { Post } from '@/types';
 import { format, parseISO } from 'date-fns';
 
-// Disable caching for the home page in Dev to see new posts immediately
-export const dynamic = 'force-dynamic';
+// 📌 ISR: Revalidate the home page every 60 seconds to show new posts
+export const revalidate = 1;
 
 export default async function Home() {
   const posts: Post[] = await getPosts();
@@ -49,10 +49,10 @@ export default async function Home() {
                 </div>
                 <div className="flex-1 p-6 flex flex-col">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-blue-600 mb-2">
+                    <p className="text-sm font-medium text-indigo-600 mb-2">
                       {post.date ? format(parseISO(post.date), 'MMMM d, yyyy') : ''}
                     </p>
-                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
                       {post.title}
                     </h3>
                   </div>

@@ -6,10 +6,12 @@ import BlockRenderer from '@/app/components/BlockRenderer';
 import { format, parseISO } from 'date-fns';
 import { Post, Block } from '@/types';
 
+// 📌 ISR: Revalidate this page every 60 seconds
+// This allows the page to be static (fast) but update with new content/edits automatically.
+export const revalidate = 1;
+
 // 1. SSG: Generate static params for all slugs
 export async function generateStaticParams() {
-  // The build will now wait for the backend (handled by entrypoint.sh) 
-  // and properly generate all static pages on startup.
   const slugs = await getPostSlugs();
   return slugs.map((post: { slug: string }) => ({
     slug: post.slug,
@@ -29,14 +31,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'True North Vibes';
   
-  // Resolve Image URL for OpenGraph/Twitter
   const thumbnail = post.thumbnail;
   const imageUrl = thumbnail?.url 
     ? (thumbnail.url.startsWith('http') ? thumbnail.url : getStrapiURL(thumbnail.url))
     : null;
 
-  // Create a description
-  // Since the schema doesn't have a dedicated excerpt field, we generate a standard one.
   const description = `Read the article "${post.title}" on ${siteName}. Published on ${format(parseISO(post.date), 'MMMM d, yyyy')}.`;
 
   return {

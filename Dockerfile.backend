@@ -13,9 +13,12 @@ WORKDIR /opt/app
 # Copy package files first to leverage cache
 COPY backend/package.json backend/package-lock.json ./
 
-# 1. Install existing dependencies
+# Clean npm cache to prevent EINTEGRITY errors from corrupted downloads
+RUN npm cache clean --force
+
+# 1. Install dependencies (Try 'ci' for speed, fallback to 'install' to fix lockfile issues)
 # 2. Explicitly install 'pg' (Postgres driver) because it's missing from the SQLite-based package.json
-RUN npm install && npm install pg
+RUN (npm ci || npm install) && npm install pg
 
 # Copy the rest of the application code
 COPY backend/ .

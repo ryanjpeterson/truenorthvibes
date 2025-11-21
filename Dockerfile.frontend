@@ -12,8 +12,13 @@ WORKDIR /app
 # Copy package files
 COPY frontend/package.json frontend/package-lock.json ./
 
-# Install ALL dependencies (including devDependencies needed for building)
-RUN npm install
+# Clean npm cache to prevent EINTEGRITY errors from corrupted downloads
+RUN npm cache clean --force
+
+# Install dependencies
+# We try 'npm ci' first for speed/consistency. 
+# If it fails (integrity error), we fall back to 'npm install' to fix the lockfile.
+RUN npm ci || npm install
 
 # Copy source code
 COPY frontend/ .
