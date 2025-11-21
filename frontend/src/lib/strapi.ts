@@ -1,5 +1,5 @@
 import qs from 'qs';
-import { Post } from '@/types';
+import { Post, Home } from '@/types';
 
 // Public URL: Used by the browser (e.g., http://localhost:1337 or https://my-site.com)
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://127.0.0.1:1337';
@@ -144,4 +144,17 @@ export async function getPostBySlug(slug: string) {
 
   const res = await fetchAPI('/posts', query);
   return res.data.length > 0 ? res.data[0] : null;
+}
+
+// 4. Get Home Page Data
+export async function getHomeData() {
+  const query = {
+    populate: {
+      hero: {
+        fields: ['url', 'alternativeText', 'width', 'height'],
+      },
+    },
+  };
+  const res = await fetchAPI('/home', query);
+  return res.data;
 }

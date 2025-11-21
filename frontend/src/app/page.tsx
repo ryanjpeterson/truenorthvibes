@@ -1,26 +1,55 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getPosts, getStrapiURL } from '@/lib/strapi';
-import { Post } from '@/types';
+import { getPosts, getHomeData, getStrapiURL } from '@/lib/strapi';
+import { Post, Home as HomeType } from '@/types';
 import { format, parseISO } from 'date-fns';
 
 // 📌 ISR: Revalidate the home page every 1 second
 export const revalidate = 1;
 
 export default async function Home() {
-  const posts: Post[] = await getPosts();
+  // Fetch both posts and home data in parallel
+  const [posts, homeData]: [Post[], HomeType] = await Promise.all([
+    getPosts(),
+    getHomeData(),
+  ]);
+
+  // Resolve Hero Image URL
+  const heroImageUrl = homeData?.hero?.url
+    ? (homeData.hero.url.startsWith('http') ? homeData.hero.url : getStrapiURL(homeData.hero.url))
+    : null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <header className="text-center mb-16">
-        <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-6xl mb-4">
-          True North Vibes
-        </h1>
-        <p className="max-w-2xl mx-auto text-xl text-gray-500">
-          Stories, tips, and guides for rental living.
-        </p>
+      
+      {/* Hero Section */}
+      <header className="relative text-center mb-16 rounded-3xl overflow-hidden h-[400px] flex items-center justify-center">
+        {/* Background Image */}
+        {heroImageUrl && (
+          <Image
+            src={heroImageUrl}
+            alt={homeData.hero.alternativeText || "Hero background"}
+            fill
+            priority
+            className="object-cover z-0"
+          />
+        )}
+        
+        {/* Dark Overlay for better text contrast */}
+        <div className="absolute inset-0 bg-black/50 z-10" />
+
+        {/* Text Content (Z-Index to sit above image/overlay) */}
+        <div className="relative z-20 max-w-3xl px-4">
+          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-6xl mb-4 drop-shadow-md">
+            {homeData?.header || "True North Vibes"}
+          </h1>
+          <p className="max-w-2xl mx-auto text-xl text-gray-200 drop-shadow-sm">
+            {homeData?.subtitle || "Stories, tips, and guides for rental living."}
+          </p>
+        </div>
       </header>
 
+      {/* Blog Grid */}
       <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
         {posts.map((post) => {
            const thumbnail = post.thumbnail;

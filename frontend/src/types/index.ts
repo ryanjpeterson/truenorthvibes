@@ -47,3 +47,11 @@ export interface Post {
   sponsors?: Sponsor[];
   categories?: Category[];
 }
+
+export interface Home {
+  id: number;
+  documentId: string;
+  header: string;
+  subtitle: string;
+  hero: StrapiImage;
+}
