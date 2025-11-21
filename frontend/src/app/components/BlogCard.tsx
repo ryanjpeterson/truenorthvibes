@@ -54,7 +54,7 @@ export default function BlogCard({ post }: BlogCardProps) {
                     <span 
                       key={category.id} 
                       // Updated styling: rounded-md, removed shadow
-                      className="inline-block bg-blue-50 text-blue-600 border border-blue-200 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md transition-colors"
+                      className="inline-block bg-blue-50 text-blue-600 border border-blue-200 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md transition-colors"
                     >
                       {category.name}
                     </span>
@@ -88,7 +88,7 @@ export default function BlogCard({ post }: BlogCardProps) {
                         />
                       )}
                     </div>
-                    <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide truncate">
+                    <span className="text-xs font-semibold text-blue-600 tracking-wide truncate">
                       Sponsored by {sponsor.name}
                     </span>
                   </div>
