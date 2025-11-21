@@ -9,7 +9,7 @@ interface PostListProps {
   categories: Category[];
 }
 
-export default function PostList({ posts, categories }: PostListProps) {
+export default function PostList({ posts, categories = [] }: PostListProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Filter posts based on selection
@@ -25,11 +25,10 @@ export default function PostList({ posts, categories }: PostListProps) {
       <div className="flex flex-wrap justify-start gap-4">
         <button
           onClick={() => setSelectedCategory(null)}
-          // Changed rounded-full to rounded-md and removed shadow-md
           className={`w-24 px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 border flex justify-center items-center ${
             selectedCategory === null
               ? 'bg-blue-600 text-white border-blue-600 transform scale-105'
-              : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-500'
+              : 'bg-blue-50 text-blue-800 border-blue-100 hover:border-blue-300 hover:text-blue-500'
           }`}
         >
           All
@@ -38,11 +37,10 @@ export default function PostList({ posts, categories }: PostListProps) {
           <button
             key={category.id}
             onClick={() => setSelectedCategory(category.name)}
-            // Changed rounded-full to rounded-md and removed shadow-md
             className={`w-24 px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 border flex justify-center items-center ${
               selectedCategory === category.name
                 ? 'bg-blue-600 text-white border-blue-600 transform scale-105'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-500'
+                : 'bg-blue-50 text-blue-800 border-blue-100 hover:border-blue-300 hover:text-blue-500'
             }`}
           >
             {category.name}

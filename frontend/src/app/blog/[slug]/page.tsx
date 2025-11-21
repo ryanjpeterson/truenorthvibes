@@ -113,7 +113,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
           {/* Right: Date & Categories */}
           <div className="flex flex-col items-start md:items-end flex-shrink-0 gap-2">
             {post.date && (
-              <time className="text-gray-500 text-lg font-medium">
+              <time className="text-blue-600 text-lg font-medium">
                 {format(parseISO(post.date), 'MMMM d, yyyy')}
               </time>
             )}
