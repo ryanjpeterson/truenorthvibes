@@ -42,6 +42,11 @@
       "allowedTypes": [
         "images"
       ]
+    },
+    "sponsor": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::sponsor.sponsor"
     }
   }
 }
