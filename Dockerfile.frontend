@@ -1,0 +1,41 @@
+# -----------------------------------------------------------------------------
+# Service: Next.js 16 Frontend (Runtime Build Strategy)
+# Location: /Dockerfile.frontend (Root Directory)
+# -----------------------------------------------------------------------------
+FROM node:20-alpine
+
+# Install curl (for entrypoint check) and libc6-compat
+RUN apk add --no-cache libc6-compat curl
+
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package.json frontend/package-lock.json ./
+
+# Install ALL dependencies (including devDependencies needed for building)
+RUN npm install
+
+# Copy source code
+COPY frontend/ .
+
+# Copy and setup the entrypoint script
+COPY frontend/entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Accept arguments (These are used during the RUNTIME build now)
+ARG NEXT_PUBLIC_STRAPI_URL
+ARG NEXT_PUBLIC_SITE_NAME
+ARG STRAPI_INTERNAL_URL
+
+# Set environment variables
+ENV NEXT_PUBLIC_STRAPI_URL=${NEXT_PUBLIC_STRAPI_URL}
+ENV NEXT_PUBLIC_SITE_NAME=${NEXT_PUBLIC_SITE_NAME}
+ENV STRAPI_INTERNAL_URL=${STRAPI_INTERNAL_URL}
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+EXPOSE 3000
+
+# Use the entrypoint script to handle the wait-then-build logic
+ENTRYPOINT ["entrypoint.sh"]

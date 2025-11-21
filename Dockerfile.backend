@@ -1,0 +1,30 @@
+# -----------------------------------------------------------------------------
+# Service: Strapi 5 Backend
+# Location: /Dockerfile.backend (Root Directory)
+# -----------------------------------------------------------------------------
+FROM node:20-alpine
+
+# Install system dependencies required by Strapi/Sharp
+# libvips-dev is crucial for image processing in Strapi
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git
+
+WORKDIR /opt/app
+
+# Copy package files first to leverage cache
+COPY backend/package.json backend/package-lock.json ./
+
+# 1. Install existing dependencies
+# 2. Explicitly install 'pg' (Postgres driver) because it's missing from the SQLite-based package.json
+RUN npm install && npm install pg
+
+# Copy the rest of the application code
+COPY backend/ .
+
+# Build Strapi admin panel
+RUN npm run build
+
+# Expose the Strapi port
+EXPOSE 1337
+
+# Start the application
+CMD ["npm", "run", "start"]
