@@ -1,10 +1,10 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  // 'standalone' is required for Docker deployments to keep the image size small
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
   output: "standalone",
   images: {
-    // Keep unoptimized true to avoid issues with local/container IP resolution
-    unoptimized: true,
+    unoptimized: true, // Keep unoptimized for simplicity/cost, or remove if you want Next.js optimization
     remotePatterns: [
       {
         protocol: 'http',
@@ -20,8 +20,15 @@ const nextConfig = {
       },
       {
         protocol: 'http',
-        hostname: 'backend', // Allow internal docker hostname
+        hostname: 'backend',
         port: '1337',
+        pathname: '/uploads/**',
+      },
+      // Add your production domain
+      {
+        protocol: 'https',
+        hostname: 'vibes.ryanjpeterson.dev',
+        port: '',
         pathname: '/uploads/**',
       },
     ],

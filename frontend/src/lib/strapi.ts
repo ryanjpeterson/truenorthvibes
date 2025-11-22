@@ -1,6 +1,7 @@
 import qs from 'qs';
+import { Post, Home, Category } from '@/types';
 
-// Public URL: Used by the browser (e.g., http://localhost:1337 or https://my-site.com)
+// Public URL: Used by the browser (e.g., https://vibes.ryanjpeterson.dev)
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://127.0.0.1:1337';
 
 // Internal URL: Used by the Next.js server (Docker container to Docker container)
@@ -17,9 +18,16 @@ export function getStrapiInternalURL(path = '') {
 async function fetchAPI(path: string, urlParamsObject = {}, options = {}) {
   // Build the request URL
   const queryString = qs.stringify(urlParamsObject, { encodeValuesOnly: true });
+  
   // Determine if we are running on the server or client
   const isServer = typeof window === 'undefined';
+  
+  // CRITICAL FIX:
+  // When fetching data (JSON) on the server, use the INTERNAL URL (http://backend:1337)
+  // When constructing IMAGE URLs for the client, we typically use getStrapiURL() in components.
+  // This logic here is strictly for fetching API data.
   const baseUrl = isServer ? getStrapiInternalURL() : getStrapiURL();
+  
   const requestUrl = `${baseUrl}/api${path}${queryString ? `?${queryString}` : ''}`;
 
   try {
@@ -33,7 +41,6 @@ async function fetchAPI(path: string, urlParamsObject = {}, options = {}) {
     const response = await fetch(requestUrl, mergedOptions);
 
     if (!response.ok) {
-      // Capture the error details from the response body if possible
       const errorText = await response.text();
       console.error(`🚨 Strapi API Error (${response.status}) at ${requestUrl}:`, errorText);
       throw new Error(`Strapi Error: ${response.status} ${response.statusText} - ${errorText}`);
@@ -42,7 +49,6 @@ async function fetchAPI(path: string, urlParamsObject = {}, options = {}) {
     const data = await response.json();
     return data;
   } catch (error) {
-    // Re-throw the error with context so we can see it in the Next.js build output
     console.error('❌ Fetch API Execution Error:', error);
     if (error instanceof Error) {
       throw error;
@@ -51,6 +57,7 @@ async function fetchAPI(path: string, urlParamsObject = {}, options = {}) {
   }
 }
 
+// ... rest of the file (getPosts, etc.) remains the same
 // 1. Get List of Posts
 export async function getPosts() {
   const query = {
