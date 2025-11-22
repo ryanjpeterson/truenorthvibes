@@ -19,6 +19,8 @@ export default function PostList({ posts, categories = [] }: PostListProps) {
       )
     : posts;
 
+  console.log(categories)
+
   return (
     <div className="space-y-12">
       {/* Category Filter Bar */}

@@ -16,8 +16,6 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN npm cache clean --force
 
 # Install dependencies
-# We try 'npm ci' first for speed/consistency. 
-# If it fails (integrity error), we fall back to 'npm install' to fix the lockfile.
 RUN npm ci || npm install
 
 # Copy source code
@@ -27,7 +25,7 @@ COPY frontend/ .
 COPY frontend/entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Accept arguments (These are used during the RUNTIME build now)
+# Accept arguments
 ARG NEXT_PUBLIC_STRAPI_URL
 ARG NEXT_PUBLIC_SITE_NAME
 ARG STRAPI_INTERNAL_URL
@@ -42,5 +40,4 @@ ENV HOSTNAME="0.0.0.0"
 
 EXPOSE 3000
 
-# Use the entrypoint script to handle the wait-then-build logic
 ENTRYPOINT ["entrypoint.sh"]

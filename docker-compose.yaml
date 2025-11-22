@@ -2,7 +2,7 @@ services:
   # 1. Database (Postgres)
   postgres:
     image: postgres:16-alpine
-    container_name: blog_db
+    container_name: truenorthvibes_db
     hostname: postgres
     restart: unless-stopped
     environment:
@@ -15,7 +15,7 @@ services:
       - app-network
     # Updated Healthcheck: Adds default 'strapi' user if variable fails to expand
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-strapi}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,7 +25,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: blog_cms
+    container_name: truenorthvibes_cms
     restart: unless-stopped
     depends_on:
       postgres:
@@ -64,7 +64,7 @@ services:
         NEXT_PUBLIC_STRAPI_URL: http://localhost:1337
         STRAPI_INTERNAL_URL: http://backend:1337
         NEXT_PUBLIC_SITE_NAME: "True North Vibes"
-    container_name: blog_frontend
+    container_name: truenorthvibes_frontend
     restart: unless-stopped
     depends_on:
       - backend
