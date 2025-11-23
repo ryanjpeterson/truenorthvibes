@@ -27,6 +27,7 @@ export default function Hero({ title, subtitle, image, categories }: HeroProps) 
           fill
           priority
           className="object-cover z-0"
+          quality={1}
         />
       )}
       

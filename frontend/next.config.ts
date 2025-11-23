@@ -4,7 +4,6 @@ const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
   images: {
-    unoptimized: true, // Keep unoptimized for simplicity/cost, or remove if you want Next.js optimization
     remotePatterns: [
       {
         protocol: 'http',
