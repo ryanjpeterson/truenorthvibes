@@ -31,9 +31,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'True North Vibes';
   
-  const thumbnail = post.thumbnail;
-  const imageUrl = thumbnail?.url 
-    ? (thumbnail.url.startsWith('http') ? thumbnail.url : getStrapiURL(thumbnail.url))
+  const hero = post.hero;
+  const imageUrl = hero?.url 
+    ? (hero.url.startsWith('http') ? hero.url : getStrapiURL(hero.url))
     : null;
 
   const description = `Read the article "${post.title}" on ${siteName}. Published on ${format(parseISO(post.date), 'MMMM d, yyyy')}.`;
@@ -49,9 +49,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       images: imageUrl ? [
         {
           url: imageUrl,
-          width: thumbnail.width,
-          height: thumbnail.height,
-          alt: thumbnail.alternativeText || post.title,
+          width: hero.width,
+          height: hero.height,
+          alt: hero.alternativeText || post.title,
         }
       ] : [],
       locale: 'en_CA',
@@ -78,8 +78,8 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
   }
 
   // Resolve Data
-  const sponsors = post.sponsors;
-  const categories = post.categories;
+  const sponsor = post.sponsor;
+  const category = post.category;
   const formattedDate = post.date ? format(parseISO(post.date), 'MMMM d, yyyy') : '';
 
   return (
@@ -89,25 +89,23 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
       <Hero 
         title={post.title}
         subtitle={formattedDate} 
-        image={post.thumbnail}
-        categories={categories} // Pass categories to Hero
+        image={post.hero}
+        category={category} // Pass categories to Hero
       />
 
       {/* Main Content Container */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         
         {/* Post Meta Header (Sponsors Only - Categories moved to Hero) */}
-        <div className="mb-10 text-center">
-          
-          {/* Sponsors Block */}
-          {sponsors && sponsors.length > 0 && (
-            <div className="flex flex-col gap-6 mt-8">
-              {sponsors.map(sponsor => {
-                 const sponsorIconUrl = sponsor.icon?.url
-                   ? (sponsor.icon.url.startsWith('http') ? sponsor.icon.url : getStrapiURL(sponsor.icon.url))
-                   : null;
+        {sponsor && (
+          <div className="mb-10 text-center">
+            {(() => {
+              const sponsorIconUrl = sponsor.icon?.url
+                  ? (sponsor.icon.url.startsWith('http') ? sponsor.icon.url : getStrapiURL(sponsor.icon.url))
+                  : null;
 
-                 return (
+              return (
+                <div className="flex flex-col gap-6 mt-8">
                   <div key={sponsor.id} className="bg-blue-50 border border-blue-100 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-4 w-full text-left">
                     {sponsorIconUrl && (
                       <div className="relative w-16 h-16 flex-shrink-0 bg-white rounded-full overflow-hidden shadow-sm border border-gray-100">
@@ -138,11 +136,11 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                       )}
                     </div>
                   </div>
-                 );
-              })}
-            </div>
-          )}
-        </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Blog Content Body */}
         <div className="space-y-8">

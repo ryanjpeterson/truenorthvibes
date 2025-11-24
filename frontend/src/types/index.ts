@@ -25,14 +25,10 @@ export interface Category {
 export interface Block {
   __component: string;
   id: number;
-  // Component: blog.you-tube-embed
   url?: string;
   caption?: string;
-  // Component: blog.text-block
-  content?: any[]; // JSON blocks for RichText
-  // Component: blog.single-image
+  content?: any[];
   image?: StrapiImage;
-  // Component: blog.multiple-images
   images?: StrapiImage[];
 }
 
@@ -41,11 +37,11 @@ export interface Post {
   documentId: string;
   title: string;
   slug: string;
-  date: string; // 'YYYY-MM-DD' based on type: 'date'
-  thumbnail: StrapiImage;
+  date: string;
+  hero: StrapiImage;
   body?: Block[];
-  sponsors?: Sponsor[];
-  categories?: Category[];
+  sponsor?: Sponsor; 
+  category?: Category;
 }
 
 export interface Home {

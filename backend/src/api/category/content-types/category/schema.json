@@ -4,26 +4,27 @@
   "info": {
     "singularName": "category",
     "pluralName": "categories",
-    "displayName": "Categories"
+    "displayName": "Category",
+    "description": ""
   },
   "options": {
-    "draftAndPublish": false
+    "draftAndPublish": true
   },
   "pluginOptions": {},
   "attributes": {
     "name": {
       "type": "string",
-      "required": true
+      "required": true,
+      "unique": true
     },
     "description": {
-      "type": "text",
-      "required": true
+      "type": "text"
     },
     "posts": {
       "type": "relation",
-      "relation": "manyToMany",
+      "relation": "oneToMany",
       "target": "api::post.post",
-      "inversedBy": "categories"
+      "mappedBy": "category"
     }
   }
 }

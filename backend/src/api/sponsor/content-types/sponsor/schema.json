@@ -4,10 +4,11 @@
   "info": {
     "singularName": "sponsor",
     "pluralName": "sponsors",
-    "displayName": "Sponsors"
+    "displayName": "Sponsor",
+    "description": ""
   },
   "options": {
-    "draftAndPublish": false
+    "draftAndPublish": true
   },
   "pluginOptions": {},
   "attributes": {
@@ -15,8 +16,11 @@
       "type": "string",
       "required": true
     },
-    "biography": {
+    "description": {
       "type": "text"
+    },
+    "url": {
+      "type": "string"
     },
     "icon": {
       "type": "media",
@@ -26,14 +30,11 @@
         "images"
       ]
     },
-    "description": {
-      "type": "string"
-    },
     "posts": {
       "type": "relation",
-      "relation": "manyToMany",
+      "relation": "oneToMany",
       "target": "api::post.post",
-      "mappedBy": "sponsors"
+      "mappedBy": "sponsor"
     }
   }
 }

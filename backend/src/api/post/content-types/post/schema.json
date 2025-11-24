@@ -4,7 +4,8 @@
   "info": {
     "singularName": "post",
     "pluralName": "posts",
-    "displayName": "Posts"
+    "displayName": "Post",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -13,8 +14,8 @@
   "attributes": {
     "title": {
       "type": "string",
-      "maxLength": 100,
-      "required": true
+      "required": true,
+      "unique": false
     },
     "slug": {
       "type": "uid",
@@ -25,6 +26,14 @@
       "type": "date",
       "required": true
     },
+    "hero": {
+      "type": "media",
+      "multiple": false,
+      "required": true,
+      "allowedTypes": [
+        "images"
+      ]
+    },
     "body": {
       "type": "dynamiczone",
       "components": [
@@ -33,28 +42,19 @@
         "blog.single-image",
         "blog.multiple-images"
       ],
-      "required": true,
-      "min": 1
+      "required": true
     },
-    "thumbnail": {
-      "type": "media",
-      "multiple": false,
-      "required": true,
-      "allowedTypes": [
-        "images"
-      ]
-    },
-    "sponsors": {
+    "category": {
       "type": "relation",
-      "relation": "manyToMany",
-      "target": "api::sponsor.sponsor",
+      "relation": "manyToOne",
+      "target": "api::category.category",
       "inversedBy": "posts"
     },
-    "categories": {
+    "sponsor": {
       "type": "relation",
-      "relation": "manyToMany",
-      "target": "api::category.category",
-      "mappedBy": "posts"
+      "relation": "manyToOne",
+      "target": "api::sponsor.sponsor",
+      "inversedBy": "posts"
     }
   }
 }

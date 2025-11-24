@@ -8,10 +8,10 @@ interface HeroProps {
   title: string;
   subtitle?: string;
   image?: StrapiImage;
-  categories?: Category[];
+  category?: Category;
 }
 
-export default function Hero({ title, subtitle, image, categories }: HeroProps) {
+export default function Hero({ title, subtitle, image, category }: HeroProps) {
   // Resolve Hero Image URL
   const heroImageUrl = image?.url
     ? (image.url.startsWith('http') ? image.url : getStrapiURL(image.url))
@@ -45,9 +45,8 @@ export default function Hero({ title, subtitle, image, categories }: HeroProps) 
         )}
 
         {/* Categories (Blue Buttons) - Centered below date */}
-        {categories && categories.length > 0 && (
+        {category && (
           <div className="flex flex-wrap justify-center gap-2">
-            {categories.map((category) => (
               <span 
                 key={category.id} 
                 // Updated styling: bg-blue-50, border-blue-100 (consistent with other tags)
@@ -57,7 +56,6 @@ export default function Hero({ title, subtitle, image, categories }: HeroProps) 
               >
                 {category.name}
               </span>
-            ))}
           </div>
         )}
       </div>
