@@ -1,43 +1,61 @@
 # -----------------------------------------------------------------------------
-# Service: Next.js 16 Frontend (Runtime Build Strategy)
+# Service: Next.js 16 Frontend (Build-Time SSG Strategy)
 # Location: /Dockerfile.frontend (Root Directory)
 # -----------------------------------------------------------------------------
-FROM node:20-alpine
+FROM node:20-alpine AS base
 
-# Install curl (for entrypoint check) and libc6-compat
+# Install libc6-compat (needed for some Next.js dependencies)
 RUN apk add --no-cache libc6-compat curl
-
 WORKDIR /app
 
-# Copy package files
+# --- Dependencies Stage ---
+FROM base AS deps
 COPY frontend/package.json frontend/package-lock.json ./
+# Clean cache and install dependencies
+RUN npm cache clean --force && npm ci || npm install
 
-# Clean npm cache to prevent EINTEGRITY errors from corrupted downloads
-RUN npm cache clean --force
-
-# Install dependencies
-RUN npm ci || npm install
-
-# Copy source code
+# --- Builder Stage ---
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ .
 
-# Copy and setup the entrypoint script
-COPY frontend/entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# Accept arguments
+# Build Arguments (Passed from docker-compose)
 ARG NEXT_PUBLIC_STRAPI_URL
 ARG NEXT_PUBLIC_SITE_NAME
 ARG STRAPI_INTERNAL_URL
 
-# Set environment variables
+# Environment Variables for Build Time
 ENV NEXT_PUBLIC_STRAPI_URL=${NEXT_PUBLIC_STRAPI_URL}
 ENV NEXT_PUBLIC_SITE_NAME=${NEXT_PUBLIC_SITE_NAME}
+# During build, we need to access the backend. 
+# Since "backend" service isn't resolvable during 'docker build', 
+# we usually point this to the PUBLIC URL of your live API for SSG fetching.
+# Or we can use a special build argument if the public URL isn't available yet.
 ENV STRAPI_INTERNAL_URL=${STRAPI_INTERNAL_URL}
+ENV NODE_ENV=production
+
+# Run the build! 
+# This happens BEFORE the container starts, ensuring zero downtime during switchover.
+RUN npm run build
+
+# --- Runner Stage ---
+FROM base AS runner
+WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy built assets
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
 EXPOSE 3000
 
-ENTRYPOINT ["entrypoint.sh"]
+CMD ["node", "server.js"]

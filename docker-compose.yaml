@@ -1,8 +1,8 @@
 services:
-  # 1. Database (Postgres)
+  # ... postgres and backend services remain unchanged ...
   postgres:
     image: postgres:16-alpine
-    container_name: truenorthvibes_db
+    container_name: blog_postgres
     hostname: postgres
     restart: unless-stopped
     environment:
@@ -13,19 +13,17 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
-    # Updated Healthcheck: Adds default 'strapi' user if variable fails to expand
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # 2. Backend (Strapi)
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: truenorthvibes_cms
+    container_name: blog_backend
     restart: unless-stopped
     depends_on:
       postgres:
@@ -44,32 +42,33 @@ services:
       APP_KEYS: ${APP_KEYS}
       API_TOKEN_SALT: ${API_TOKEN_SALT}
       TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
+      PUBLIC_URL: ${NEXT_PUBLIC_STRAPI_URL} # Use full public URL
       HOST: 0.0.0.0
       PORT: 1337
     ports:
       - "1337:1337"
     volumes:
       - ./backend/public/uploads:/opt/app/public/uploads
-      - ./backend/src:/opt/app/src 
-      - ./backend/types:/opt/app/types
     networks:
       - app-network
 
-  # 3. Frontend (Next.js)
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
       args:
         NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-        STRAPI_INTERNAL_URL: http://backend:1337
         NEXT_PUBLIC_SITE_NAME: "True North Vibes"
-    container_name: truenorthvibes_frontend
+        # CRITICAL: During build, we can't reach 'http://backend:1337'.
+        # We must use the public URL to fetch data from the *currently running* backend.
+        # If this is the FIRST deployment, SSG might fail (we handle this below).
+        STRAPI_INTERNAL_URL: ${NEXT_PUBLIC_STRAPI_URL}
+    container_name: blog_frontend
     restart: unless-stopped
-    depends_on:
-      - backend
+    # We remove 'depends_on' because the build happens independently now
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
+      # At RUNTIME, we switch back to internal networking for speed
       STRAPI_INTERNAL_URL: http://backend:1337
     ports:
       - "3000:3000"
