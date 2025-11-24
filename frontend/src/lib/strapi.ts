@@ -152,8 +152,24 @@ export async function getHomeData(): Promise<Home> {
 
 // 5. Get Categories
 export async function getCategories(): Promise<Category[]> {
-  // This route is correct as it hits the collection type endpoint /api/categories
-  const query = { fields: ['name', 'description'], sort: ['name:asc'] };
+  const query = { 
+    fields: ['name', 'description'], 
+    sort: ['name:asc'],
+    // Populate posts to check if the category is empty
+    populate: {
+      posts: {
+        fields: ['documentId'], // Fetch minimal data (ID only) to check count
+      }
+    }
+  };
+  
   const res = await fetchAPI('/categories', query);
-  return res?.data || [];
+  
+  if (!res?.data) return [];
+
+  // Filter: Return only categories that have at least one associated post
+  // We explicitly check if the 'posts' array exists and has length > 0
+  return res.data.filter((category: any) => 
+    category.posts && Array.isArray(category.posts) && category.posts.length > 0
+  );
 }
