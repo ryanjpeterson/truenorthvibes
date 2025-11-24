@@ -4,58 +4,47 @@
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS base
 
-# Install libc6-compat (needed for some Next.js dependencies)
+# Install libc6-compat
 RUN apk add --no-cache libc6-compat curl
+
 WORKDIR /app
 
 # --- Dependencies Stage ---
-FROM base AS deps
 COPY frontend/package.json frontend/package-lock.json ./
 # Clean cache and install dependencies
 RUN npm cache clean --force && npm ci || npm install
 
 # --- Builder Stage ---
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ .
 
 # Build Arguments (Passed from docker-compose)
 ARG NEXT_PUBLIC_STRAPI_URL
 ARG NEXT_PUBLIC_SITE_NAME
+# CRITICAL: This must be passed during build to fetch SSG data
 ARG STRAPI_INTERNAL_URL
 
 # Environment Variables for Build Time
 ENV NEXT_PUBLIC_STRAPI_URL=${NEXT_PUBLIC_STRAPI_URL}
 ENV NEXT_PUBLIC_SITE_NAME=${NEXT_PUBLIC_SITE_NAME}
-# During build, we need to access the backend. 
-# Since "backend" service isn't resolvable during 'docker build', 
-# we usually point this to the PUBLIC URL of your live API for SSG fetching.
-# Or we can use a special build argument if the public URL isn't available yet.
 ENV STRAPI_INTERNAL_URL=${STRAPI_INTERNAL_URL}
 ENV NODE_ENV=production
 
-# Run the build! 
-# This happens BEFORE the container starts, ensuring zero downtime during switchover.
+# 🏗️ RUN THE BUILD HERE (Zero Downtime Magic)
+# This runs while the old container is still serving traffic.
+# It creates the .next folder inside the image.
 RUN npm run build
 
 # --- Runner Stage ---
-FROM base AS runner
-WORKDIR /app
-ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Create user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-
-# Copy built assets
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+# Start the server immediately (No build step here)
+CMD ["npm", "start"]
