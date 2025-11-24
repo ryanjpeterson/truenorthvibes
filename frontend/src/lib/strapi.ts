@@ -34,25 +34,46 @@ async function fetchAPI(path: string, urlParamsObject = {}, options: FetchOption
       ...options,
     };
 
-    const response = await fetch(requestUrl, mergedOptions);
+    // Add a timeout to fail fast if the backend is hanging/down during build
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(requestUrl, { 
+      ...mergedOptions, 
+      signal: controller.signal 
+    });
+    
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
+      // Log but don't crash yet, let the catch block handle it
       const errorText = await response.text();
       console.error(`🚨 Strapi API Error (${response.status}) at ${requestUrl}:`, errorText);
-      throw new Error(`Strapi Error: ${response.status} ${response.statusText} - ${errorText}`);
+      throw new Error(`Strapi Error: ${response.status}`);
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error('❌ Fetch API Execution Error:', error);
-    if (error instanceof Error) {
-      throw error;
+    
+    // CRITICAL FIX for Build Time:
+    // If fetch fails (backend down or unreachable during docker build), 
+    // return a safe empty structure so the build doesn't crash.
+    // ISR will attempt to re-generate the page at runtime when the backend is up.
+    if (isServer) {
+      console.warn('⚠️ Returning empty fallback data for build safety.');
+      return { 
+        data: [], 
+        meta: { pagination: { page: 1, pageSize: 0, pageCount: 0, total: 0 } } 
+      };
     }
+    
     throw new Error('An unexpected error occurred while fetching from Strapi');
   }
 }
 
+// ... rest of your file ...
 interface GetPostsParams {
   page?: number;
   pageSize?: number;
@@ -76,19 +97,23 @@ export async function getPosts({ page = 1, pageSize = 10, category }: GetPostsPa
   }
 
   const res = await fetchAPI('/posts', query);
+  // Ensure we always match the return type structure even if fetchAPI returned the fallback
+  if (!res.data) {
+     return { data: [], meta: { pagination: { page: 1, pageSize: 0, pageCount: 0, total: 0 } } };
+  }
   return res; 
 }
 
-// 2. Get All Slugs (Updated to include updatedAt)
+// 2. Get All Slugs
 export async function getPostSlugs() {
   const query = {
-    fields: ['slug', 'updatedAt'], // Added updatedAt
+    fields: ['slug', 'updatedAt'],
     pagination: {
-      pageSize: 1000, // Increased limit to capture more posts for sitemap
+      pageSize: 1000,
     },
   };
   const res = await fetchAPI('/posts', query);
-  return res.data;
+  return res.data || [];
 }
 
 // 3. Get Single Post
@@ -110,19 +135,20 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
     },
   };
   const res = await fetchAPI('/posts', query);
-  return res.data.length > 0 ? res.data[0] : null;
+  return res.data && res.data.length > 0 ? res.data[0] : null;
 }
 
 // 4. Get Home Page Data
 export async function getHomeData(): Promise<Home> {
   const query = { populate: { hero: { fields: ['url', 'alternativeText', 'width', 'height'] } } };
   const res = await fetchAPI('/home', query);
-  return res.data;
+  // Return empty object cast as Home if fails, preventing crash
+  return res.data || {} as Home;
 }
 
 // 5. Get Categories
 export async function getCategories(): Promise<Category[]> {
   const query = { fields: ['name', 'description'], sort: ['name:asc'] };
   const res = await fetchAPI('/categories', query);
-  return res.data;
+  return res.data || [];
 }
