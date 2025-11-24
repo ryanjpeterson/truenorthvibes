@@ -52,46 +52,63 @@ services:
       - ./backend/public/uploads:/opt/app/public/uploads
     networks:
       - app-network
-    # Add Backend Healthcheck
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
-  # 3. Frontend (Next.js)
-  frontend:
+  # 3. Frontend BLUE (Default Port 3000)
+  frontend-blue:
     build:
       context: .
       dockerfile: Dockerfile.frontend
       args:
         NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
         NEXT_PUBLIC_SITE_NAME: "True North Vibes"
-        # During build, point to the LIVE public URL for SSG
-        STRAPI_INTERNAL_URL: ${NEXT_PUBLIC_STRAPI_URL}
-    # Remove container_name to allow scaling (optional, but needed for true rolling updates)
-    # container_name: blog_frontend 
-    restart: unless-stopped
+        STRAPI_INTERNAL_URL: http://backend:1337
+    container_name: frontend-blue
+    restart: always
+    ports:
+      - "3000:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
       STRAPI_INTERNAL_URL: http://backend:1337
-    ports:
-      # IMPORTANT: Remove host port mapping (3000:3000) if you use scaling/rolling updates
-      # because multiple containers can't bind to port 3000 on the host.
-      # Nginx should proxy to the internal Docker DNS 'frontend' which load balances.
-      # For simple VPS with Nginx outside Docker, this is tricky.
-      # Let's keep it simple: 
-      - "3000:3000" 
     networks:
       - app-network
-    # Add Frontend Healthcheck
+    # Healthcheck is CRITICAL for the deploy script to know when build is done
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 10s
+      retries: 20 # Give it time to build (20 * 10s = ~3 mins max)
+      start_period: 30s
+
+  # 4. Frontend GREEN (Alt Port 3001)
+  frontend-green:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
+        NEXT_PUBLIC_SITE_NAME: "True North Vibes"
+        STRAPI_INTERNAL_URL: http://backend:1337
+    container_name: frontend-green
+    restart: always
+    ports:
+      - "3001:3000" # Map host 3001 to container 3000
+    environment:
+      NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
+      STRAPI_INTERNAL_URL: http://backend:1337
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
 
 networks:
   app-network:
