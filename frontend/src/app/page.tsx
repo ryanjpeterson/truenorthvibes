@@ -21,7 +21,7 @@ export default async function Home({ searchParams }: HomeProps) {
   
   // Set pageSize to 12 as requested.
   // If total posts > 12, pagination controls will appear automatically.
-  const pageSize = 4; 
+  const pageSize = 12; 
 
   // Fetch posts, home data, and categories in parallel
   const [postsResponse, homeData, categories]: [any, HomeType, Category[]] = await Promise.all([
