@@ -6,7 +6,8 @@ FROM node:20-alpine
 
 # Install system dependencies required by Strapi/Sharp
 # libvips-dev is crucial for image processing in Strapi
-RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git
+# ADDED: curl (Required for Docker Healthchecks in deploy.sh)
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git curl
 
 WORKDIR /opt/app
 
