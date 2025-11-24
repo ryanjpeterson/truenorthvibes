@@ -4,8 +4,8 @@
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS base
 
-# Install libc6-compat and curl (needed for healthchecks and start script)
-RUN apk add --no-cache libc6-compat curl
+# Install libc6-compat, curl, and vips-dev (for Sharp image optimization)
+RUN apk add --no-cache libc6-compat curl vips-dev
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ RUN npm cache clean --force && npm ci || npm install
 # --- Runner Stage ---
 COPY frontend/ .
 
-# Build Arguments (Passed from docker-compose, saved as ENV)
+# Build Arguments
 ARG NEXT_PUBLIC_STRAPI_URL
 ARG NEXT_PUBLIC_SITE_NAME
 ARG STRAPI_INTERNAL_URL
@@ -33,9 +33,13 @@ ENV HOSTNAME="0.0.0.0"
 COPY frontend/start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
-# Create user for security
+# Create the user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+# CRITICAL FIX: Give the 'nextjs' user permission to write to /app
+RUN chown -R nextjs:nodejs /app
+
 USER nextjs
 
 EXPOSE 3000
