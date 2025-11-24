@@ -14,11 +14,12 @@ export default async function NotFound() {
         {/* 404 Header */}
         <div className="mb-16">
           <h1 className="text-6xl font-extrabold text-blue-600 mb-4">404</h1>
-          <h2 className="text-3xl font-bold text-gray-600 mb-6">
+          <h2 className="text-3xl font-bold mb-6">
             Page Not Found
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-            Sorry, we couldn&apos;t find what you&apos;re looking for. Check out one of our latest blog posts!
+            Sorry! we couldn&apos;t find what you&apos;re looking for.
+            <br />Check out one of our latest blog posts:
           </p>
         </div>
 
