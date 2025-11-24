@@ -1,5 +1,4 @@
 import qs from 'qs';
-import { Post, Home, Category } from '@/types';
 
 // Public URL: Used by the browser (e.g., https://vibes.ryanjpeterson.dev)
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://127.0.0.1:1337';
@@ -21,11 +20,6 @@ async function fetchAPI(path: string, urlParamsObject = {}, options = {}) {
   
   // Determine if we are running on the server or client
   const isServer = typeof window === 'undefined';
-  
-  // CRITICAL FIX:
-  // When fetching data (JSON) on the server, use the INTERNAL URL (http://backend:1337)
-  // When constructing IMAGE URLs for the client, we typically use getStrapiURL() in components.
-  // This logic here is strictly for fetching API data.
   const baseUrl = isServer ? getStrapiInternalURL() : getStrapiURL();
   
   const requestUrl = `${baseUrl}/api${path}${queryString ? `?${queryString}` : ''}`;
@@ -57,17 +51,25 @@ async function fetchAPI(path: string, urlParamsObject = {}, options = {}) {
   }
 }
 
-// ... rest of the file (getPosts, etc.) remains the same
-// 1. Get List of Posts
-export async function getPosts() {
-  const query = {
+interface GetPostsParams {
+  page?: number;
+  pageSize?: number;
+  category?: string;
+}
+
+// 1. Get List of Posts (Paginated & Filtered)
+export async function getPosts({ page = 1, pageSize = 10, category }: GetPostsParams = {}) {
+  const query: any = {
     sort: ['date:desc'],
+    pagination: {
+      page,
+      pageSize,
+    },
     fields: ['title', 'slug', 'date'],
     populate: {
       thumbnail: {
         fields: ['url', 'alternativeText', 'width', 'height'],
       },
-      // Add Categories population for the Home Page
       categories: {
         fields: ['name', 'description'],
       },
@@ -81,8 +83,20 @@ export async function getPosts() {
       },
     },
   };
+
+  // Add category filter if provided
+  if (category) {
+    query.filters = {
+      categories: {
+        name: {
+          $eq: category,
+        },
+      },
+    };
+  }
+
   const res = await fetchAPI('/posts', query);
-  return res.data;
+  return res; // Returns { data: Post[], meta: { pagination: { ... } } }
 }
 
 // 2. Get All Slugs
