@@ -1,9 +1,10 @@
 import qs from 'qs';
+import { Post, Home, Category, StrapiResponse } from '@/types';
 
-// Public URL: Used by the browser (e.g., https://vibes.ryanjpeterson.dev)
+// Public URL: Used by the browser
 const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://127.0.0.1:1337';
 
-// Internal URL: Used by the Next.js server (Docker container to Docker container)
+// Internal URL: Used by the server
 const STRAPI_INTERNAL_URL = process.env.STRAPI_INTERNAL_URL || STRAPI_URL;
 
 export function getStrapiURL(path = '') {
@@ -14,14 +15,15 @@ export function getStrapiInternalURL(path = '') {
   return `${STRAPI_INTERNAL_URL}${path}`;
 }
 
-async function fetchAPI(path: string, urlParamsObject = {}, options = {}) {
-  // Build the request URL
+interface FetchOptions {
+  headers?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+async function fetchAPI(path: string, urlParamsObject = {}, options: FetchOptions = {}) {
   const queryString = qs.stringify(urlParamsObject, { encodeValuesOnly: true });
-  
-  // Determine if we are running on the server or client
   const isServer = typeof window === 'undefined';
   const baseUrl = isServer ? getStrapiInternalURL() : getStrapiURL();
-  
   const requestUrl = `${baseUrl}/api${path}${queryString ? `?${queryString}` : ''}`;
 
   try {
@@ -57,134 +59,70 @@ interface GetPostsParams {
   category?: string;
 }
 
-// 1. Get List of Posts (Paginated & Filtered)
-export async function getPosts({ page = 1, pageSize = 10, category }: GetPostsParams = {}) {
-  const query: any = {
+// 1. Get List of Posts
+export async function getPosts({ page = 1, pageSize = 10, category }: GetPostsParams = {}): Promise<StrapiResponse<Post[]>> {
+  const query: Record<string, unknown> = {
     sort: ['date:desc'],
-    pagination: {
-      page,
-      pageSize,
-    },
+    pagination: { page, pageSize },
     fields: ['title', 'slug', 'date'],
     populate: {
-      thumbnail: {
-        fields: ['url', 'alternativeText', 'width', 'height'],
-      },
-      categories: {
-        fields: ['name', 'description'],
-      },
-      sponsors: {
-        fields: ['name'],
-        populate: {
-          icon: {
-            fields: ['url', 'alternativeText', 'width', 'height'],
-          },
-        },
-      },
+      thumbnail: { fields: ['url', 'alternativeText', 'width', 'height'] },
+      categories: { fields: ['name', 'description'] },
+      sponsors: { fields: ['name'], populate: { icon: { fields: ['url', 'alternativeText', 'width', 'height'] } } },
     },
   };
-
-  // Add category filter if provided
   if (category) {
-    query.filters = {
-      categories: {
-        name: {
-          $eq: category,
-        },
-      },
-    };
+    query.filters = { categories: { name: { $eq: category } } };
   }
 
   const res = await fetchAPI('/posts', query);
-  return res; // Returns { data: Post[], meta: { pagination: { ... } } }
+  return res; 
 }
 
-// 2. Get All Slugs
+// 2. Get All Slugs (Updated to include updatedAt)
 export async function getPostSlugs() {
   const query = {
-    fields: ['slug'],
+    fields: ['slug', 'updatedAt'], // Added updatedAt
     pagination: {
-      pageSize: 100,
+      pageSize: 1000, // Increased limit to capture more posts for sitemap
     },
   };
   const res = await fetchAPI('/posts', query);
   return res.data;
 }
 
-// 3. Get Single Post by Slug
-export async function getPostBySlug(slug: string) {
+// 3. Get Single Post
+export async function getPostBySlug(slug: string): Promise<Post | null> {
   const query = {
-    filters: {
-      slug: {
-        $eq: slug,
-      },
-    },
+    filters: { slug: { $eq: slug } },
     populate: {
-      thumbnail: {
-        fields: ['url', 'alternativeText', 'width', 'height'],
-      },
-      // Add Categories population
-      categories: {
-        fields: ['name', 'description'],
-      },
-      sponsors: {
-        fields: ['name', 'description'], 
-        populate: {
-          icon: {
-            fields: ['url', 'alternativeText', 'width', 'height'],
-          },
-        },
-      },
+      thumbnail: { fields: ['url', 'alternativeText', 'width', 'height'] },
+      categories: { fields: ['name', 'description'] },
+      sponsors: { fields: ['name', 'description'], populate: { icon: { fields: ['url', 'alternativeText', 'width', 'height'] } } },
       body: {
         on: {
-          'blog.you-tube-embed': {
-            populate: '*',
-          },
-          'blog.text-block': {
-            populate: '*', 
-          },
-          'blog.single-image': {
-            populate: {
-              image: {
-                fields: ['url', 'alternativeText', 'width', 'height'],
-              },
-            },
-          },
-          'blog.multiple-images': {
-            populate: {
-              images: {
-                fields: ['url', 'alternativeText', 'width', 'height'],
-              },
-            },
-          },
+          'blog.you-tube-embed': { populate: '*' },
+          'blog.text-block': { populate: '*' },
+          'blog.single-image': { populate: { image: { fields: ['url', 'alternativeText', 'width', 'height'] } } },
+          'blog.multiple-images': { populate: { images: { fields: ['url', 'alternativeText', 'width', 'height'] } } },
         },
       },
     },
   };
-
   const res = await fetchAPI('/posts', query);
   return res.data.length > 0 ? res.data[0] : null;
 }
 
 // 4. Get Home Page Data
-export async function getHomeData() {
-  const query = {
-    populate: {
-      hero: {
-        fields: ['url', 'alternativeText', 'width', 'height'],
-      },
-    },
-  };
+export async function getHomeData(): Promise<Home> {
+  const query = { populate: { hero: { fields: ['url', 'alternativeText', 'width', 'height'] } } };
   const res = await fetchAPI('/home', query);
   return res.data;
 }
 
-// 5. Get All Categories
-export async function getCategories() {
-  const query = {
-    fields: ['name', 'description'],
-    sort: ['name:asc'],
-  };
+// 5. Get Categories
+export async function getCategories(): Promise<Category[]> {
+  const query = { fields: ['name', 'description'], sort: ['name:asc'] };
   const res = await fetchAPI('/categories', query);
   return res.data;
 }

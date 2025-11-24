@@ -1,5 +1,5 @@
 import { getPosts, getHomeData, getCategories } from '@/lib/strapi';
-import { Post, Home as HomeType, Category } from '@/types';
+import { Post, Home as HomeType, Category, StrapiResponse } from '@/types';
 import Hero from '@/app/components/Hero';
 import PostList from '@/app/components/PostList';
 
@@ -20,11 +20,11 @@ export default async function Home({ searchParams }: HomeProps) {
   const category = resolvedSearchParams.category;
   
   // Set pageSize to 12 as requested.
-  // If total posts > 12, pagination controls will appear automatically.
   const pageSize = 12; 
 
   // Fetch posts, home data, and categories in parallel
-  const [postsResponse, homeData, categories]: [any, HomeType, Category[]] = await Promise.all([
+  // Updated type definition to remove 'any'
+  const [postsResponse, homeData, categories]: [StrapiResponse<Post[]>, HomeType, Category[]] = await Promise.all([
     getPosts({ page, pageSize, category }),
     getHomeData(),
     getCategories(),
