@@ -17,10 +17,6 @@ export default async function NotFound() {
           <h2 className="text-3xl font-bold mb-6">
             Page Not Found
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-            Sorry! we couldn&apos;t find what you&apos;re looking for.
-            <br />Check out one of our latest blog posts:
-          </p>
         </div>
 
         {/* Recent Posts Grid */}
