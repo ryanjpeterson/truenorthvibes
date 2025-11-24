@@ -2,21 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Post, Category } from '@/types';
+import { Post, Category, Pagination } from '@/types'; // Import Pagination from types
 import BlogCard from './BlogCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-interface Pagination {
-  page: number;
-  pageSize: number;
-  pageCount: number;
-  total: number;
-}
 
 interface PostListProps {
   posts: Post[];
   categories: Category[];
-  pagination: Pagination; // Added pagination prop to interface
+  pagination: Pagination; 
 }
 
 export default function PostList({ posts, categories = [], pagination }: PostListProps) {
@@ -27,10 +20,7 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
   // 1. Create a ref for the container
   const listTopRef = useRef<HTMLDivElement>(null);
   
-  // Get current active category from URL (Server-Side Filter)
-  // We prioritize the URL param over local state if present, or sync them.
-  // Actually, for this implementation, we should rely on the URL param for the "active" state
-  // to ensure it persists on reload and works with the server filter.
+  // Get current active category from URL
   const currentCategory = searchParams.get('category');
 
   // Debugging: Check if categories are actually arriving
@@ -40,14 +30,8 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
 
   // Scroll to top when category or page changes
   useEffect(() => {
-    // Only scroll if we have a specific param change that warrants it
-    // For now, we trigger on any searchParams change if the ref exists
     if (listTopRef.current) {
-       // We add a check to avoid scrolling on initial load if no params are set?
-       // For now, simple behavior: scroll on any param update (nav)
-       // But Next.js might trigger this on mount. Let's assume the user interaction handler
-       // below handles the scroll initiation, or we rely on this.
-       // The previous "handleCategoryClick" had a manual scroll. Let's stick to that for user actions.
+       // Logic handled in click handlers mostly, but this ensures sync
     }
   }, [searchParams]);
 
