@@ -1,5 +1,5 @@
 services:
-  # 1. Database (Postgres)
+  # 1. Database
   postgres:
     image: postgres:16-alpine
     container_name: blog_postgres
@@ -19,7 +19,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Backend (Strapi)
+  # 2. Backend
   backend:
     build:
       context: .
@@ -52,15 +52,15 @@ services:
       - ./backend/public/uploads:/opt/app/public/uploads
     networks:
       - app-network
-    # Add Backend Healthcheck
+    # Healthcheck ensures Strapi is actually responding before Frontend starts
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 30s
 
-  # 3. Frontend (Next.js)
+  # 3. Frontend
   frontend:
     build:
       context: .
@@ -68,30 +68,21 @@ services:
       args:
         NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
         NEXT_PUBLIC_SITE_NAME: "True North Vibes"
-        # During build, point to the LIVE public URL for SSG
+        # Build-time URL (Public Internet)
         STRAPI_INTERNAL_URL: ${NEXT_PUBLIC_STRAPI_URL}
-    # Remove container_name to allow scaling (optional, but needed for true rolling updates)
-    # container_name: blog_frontend 
+    container_name: blog_frontend
     restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
+      # Runtime URL (Internal Docker Network)
       STRAPI_INTERNAL_URL: http://backend:1337
     ports:
-      # IMPORTANT: Remove host port mapping (3000:3000) if you use scaling/rolling updates
-      # because multiple containers can't bind to port 3000 on the host.
-      # Nginx should proxy to the internal Docker DNS 'frontend' which load balances.
-      # For simple VPS with Nginx outside Docker, this is tricky.
-      # Let's keep it simple: 
-      - "3000:3000" 
+      - "3000:3000"
     networks:
       - app-network
-    # Add Frontend Healthcheck
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
 networks:
   app-network:
