@@ -40,20 +40,38 @@ docker compose up -d --build --no-deps frontend-$TARGET_COLOR
 
 # 4. Wait for the New Container to Finish Building & Start Serving
 echo "⏳ Waiting for frontend-$TARGET_COLOR to pass healthchecks..."
-echo "   (This includes the 'npm run build' time, so be patient!)"
+echo "   (Streaming build logs below...)"
 
-while [ "`docker inspect -f {{.State.Health.Status}} frontend-$TARGET_COLOR`" != "healthy" ]; do
-    STATUS=$(docker inspect -f {{.State.Health.Status}} frontend-$TARGET_COLOR)
-    echo "   ... Status: $STATUS (waiting 5s)"
-    sleep 5
+# Initialize a timestamp to track logs we've already seen
+LAST_LOG_TIME="0s"
+
+# Loop until healthy
+while [ "$(docker inspect -f '{{.State.Health.Status}}' frontend-$TARGET_COLOR)" != "healthy" ]; do
     
-    # Optional: Fail safe if it takes too long (e.g. build failed)
-    # You could add a counter here to exit if it loops > 100 times
-done
-echo "✅ frontend-$TARGET_COLOR is Healthy and Serving!"
+    # 1. Show new logs since the last check
+    # We use '2>&1' to capture both stdout and stderr (errors)
+    docker logs frontend-$TARGET_COLOR --since "$LAST_LOG_TIME" 2>&1
+    
+    # Update timestamp to "now" for the next loop iteration
+    # (Using '1s' overlap ensures we don't miss lines between commands)
+    LAST_LOG_TIME="5s" 
 
-# 5. Update Nginx Configuration
-echo "🔄 Switching Nginx to Port $TARGET_PORT..."
+    # 2. Check if the container died (Build failed)
+    if [ "$(docker inspect -f '{{.State.Running}}' frontend-$TARGET_COLOR)" == "false" ]; then
+        echo "❌ ERROR: Container stopped unexpectedly! Build likely failed."
+        echo "⬇️ FULL LOGS BELOW ⬇️"
+        docker logs frontend-$TARGET_COLOR
+        exit 1
+    fi
+
+    # Sleep briefly to avoid hammering the Docker daemon
+    sleep 5
+done
+
+# Show any final logs that appeared right before it became healthy
+docker logs frontend-$TARGET_COLOR --since "$LAST_LOG_TIME" 2>&1
+
+echo "✅ frontend-$TARGET_COLOR is Healthy and Serving!"
 
 # Use sed to update the proxy_pass line in your config
 # Matches: proxy_pass http://localhost:300X;
