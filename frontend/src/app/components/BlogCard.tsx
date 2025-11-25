@@ -50,7 +50,7 @@ export default function BlogCard({ post }: BlogCardProps) {
               {/* UPDATED: Check for singular category */}
               {category && (
                 <span 
-                  className="inline-block bg-blue-50 text-blue-800 border border-blue-100 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md transition-colors"
+                  className="inline-block bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md transition-colors"
                 >
                   {category.name}
                 </span>

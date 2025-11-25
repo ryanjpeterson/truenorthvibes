@@ -129,7 +129,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
                           href={sponsor.url} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-600 text-sm font-medium hover:text-blue-800 hover:underline"
+                          className="text-blue-600 text-sm font-medium hover:text-blue-600 hover:underline"
                         >
                           Visit Website &rarr;
                         </a>
