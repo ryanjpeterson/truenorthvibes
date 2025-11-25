@@ -106,7 +106,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
 
               return (
                 <div className="flex flex-col gap-6 mt-8">
-                  <div key={sponsor.id} className="bg-blue-50 border border-blue-100 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-4 w-full text-left">
+                  <div key={sponsor.id} className="bg-gray-50 border border-gray-100 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-4 w-full text-left">
                     {sponsorIconUrl && (
                       <div className="relative w-16 h-16 flex-shrink-0 bg-white rounded-full overflow-hidden shadow-sm border border-gray-100">
                         <Image 

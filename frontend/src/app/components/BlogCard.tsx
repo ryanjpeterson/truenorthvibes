@@ -50,7 +50,7 @@ export default function BlogCard({ post }: BlogCardProps) {
               {/* UPDATED: Check for singular category */}
               {category && (
                 <span 
-                  className="inline-block bg-blue-50 text-blue-800 border border-blue-100 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md transition-colors"
+                  className="inline-block bg-blue-50 text-blue-800 border border-blue-100 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md transition-colors"
                 >
                   {category.name}
                 </span>
@@ -72,7 +72,7 @@ export default function BlogCard({ post }: BlogCardProps) {
                   : null;
                 
                 return (
-                  <div className="flex items-center bg-blue-50 border border-blue-100 rounded-lg p-2">
+                  <div className="flex items-center bg-gray-50 border border-gray-100 rounded-lg p-2">
                     <div className="relative w-6 h-6 mr-2 flex-shrink-0 rounded-full overflow-hidden bg-white">
                       {sponsorIconUrl && (
                         <Image 
@@ -83,7 +83,7 @@ export default function BlogCard({ post }: BlogCardProps) {
                         />
                       )}
                     </div>
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide truncate">
+                    <span className="text-xs font-semibold tracking-wide truncate">
                       Sponsored by {sponsor.name}
                     </span>
                   </div>
