@@ -10,22 +10,23 @@ interface HomeProps {
   searchParams?: Promise<{
     page?: string;
     category?: string;
+    search?: string;
   }>;
 }
 
 export default async function Home({ searchParams }: HomeProps) {
-  // Resolve search params (Next.js 15+ convention requires awaiting searchParams)
+  // Resolve search params
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const page = Number(resolvedSearchParams.page) || 1;
   const category = resolvedSearchParams.category;
+  const search = resolvedSearchParams.search;
   
-  // Set pageSize to 12 as requested.
+  // Set pageSize
   const pageSize = 12; 
 
-  // Fetch posts, home data, and categories in parallel
-  // Updated type definition to remove 'any'
+  // Fetch data
   const [postsResponse, homeData, categories]: [StrapiResponse<Post[]>, HomeType, Category[]] = await Promise.all([
-    getPosts({ page, pageSize, category }),
+    getPosts({ page, pageSize, category, search }),
     getHomeData(),
     getCategories(),
   ]);
@@ -35,24 +36,19 @@ export default async function Home({ searchParams }: HomeProps) {
 
   return (
     <div className="min-h-screen">
-      
-      {/* Reusable Hero Component - Full Width */}
       <Hero 
         title={homeData?.header || "True North Vibes"}
         subtitle={homeData?.subtitle || "Stories, tips, and guides for rental living."}
         image={homeData?.hero}
       />
 
-      {/* Main Content Container - Centered and Constrained */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Interactive Post List with Category Filter & Pagination */}
         <PostList 
           posts={posts} 
           categories={categories} 
           pagination={pagination}
         />
       </div>
-      
     </div>
   );
 }

@@ -16,7 +16,6 @@ export default function BlogCard({ post }: BlogCardProps) {
     ? (hero.url.startsWith('http') ? hero.url : getStrapiURL(hero.url))
     : null;
 
-  // UPDATED: Destructure singular variables
   const sponsor = post.sponsor;
   const category = post.category;
 
@@ -46,8 +45,6 @@ export default function BlogCard({ post }: BlogCardProps) {
                 {post.date ? format(parseISO(post.date), 'MMMM d, yyyy') : ''}
               </p>
               
-              {/* Single Category Badge */}
-              {/* UPDATED: Check for singular category */}
               {category && (
                 <span 
                   className="inline-block bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md transition-colors"
@@ -62,8 +59,6 @@ export default function BlogCard({ post }: BlogCardProps) {
             </h3>
           </div>
           
-          {/* Single Sponsor Display */}
-          {/* UPDATED: Check for singular sponsor */}
           {sponsor && (
             <div className="mt-4 pt-4 flex flex-col gap-2">
               {(() => {

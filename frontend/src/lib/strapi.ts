@@ -77,25 +77,37 @@ interface GetPostsParams {
   page?: number;
   pageSize?: number;
   category?: string;
+  search?: string;
 }
 
 // 1. Get List of Posts (HOME PAGE)
-export async function getPosts({ page = 1, pageSize = 12, category }: GetPostsParams = {}): Promise<StrapiResponse<Post[]>> {
+export async function getPosts({ page = 1, pageSize = 12, category, search }: GetPostsParams = {}): Promise<StrapiResponse<Post[]>> {
   const query: Record<string, unknown> = {
     sort: ['date:desc'],
     pagination: { page, pageSize },
     fields: ['title', 'slug', 'date'],
     populate: {
-      hero: { fields: ['url', 'alternativeText', 'width', 'height'] },
-      // FIX: Use singular 'category'
+      // FIX: Use true for hero population
+      hero: true, 
       category: { fields: ['name', 'description'] },
-      // FIX: Use singular 'sponsor'
-      sponsor: { fields: ['name'], populate: { icon: { fields: ['url', 'alternativeText', 'width', 'height'] } } },
+      // FIX: Use true for icon population inside sponsor
+      sponsor: { fields: ['name'], populate: { icon: true } },
     },
   };
+
+  // Filtering Logic
+  const filters: any = {};
+  
   if (category) {
-    // FIX: Filter on singular category
-    query.filters = { category: { name: { $eq: category } } };
+    filters.category = { name: { $eq: category } };
+  }
+
+  if (search) {
+    filters.title = { $containsi: search };
+  }
+
+  if (Object.keys(filters).length > 0) {
+    query.filters = filters;
   }
 
   const res = await fetchAPI('/posts', query);
@@ -124,17 +136,16 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   const query = {
     filters: { slug: { $eq: slug } },
     populate: {
-      hero: { fields: ['url', 'alternativeText', 'width', 'height'] },
-      // FIX: Use singular 'category'
+      // FIX: Use true
+      hero: true, 
       category: { fields: ['name', 'description'] },
-      // FIX: Use singular 'sponsor'
-      sponsor: { fields: ['name', 'description', 'url'], populate: { icon: { fields: ['url', 'alternativeText', 'width', 'height'] } } },
+      sponsor: { fields: ['name', 'description', 'url'], populate: { icon: true } },
       body: {
         on: {
           'blog.you-tube-embed': { populate: '*' },
           'blog.text-block': { populate: '*' },
-          'blog.single-image': { populate: { image: { fields: ['url', 'alternativeText', 'width', 'height'] } } },
-          'blog.multiple-images': { populate: { images: { fields: ['url', 'alternativeText', 'width', 'height'] } } },
+          'blog.single-image': { populate: { image: true } }, 
+          'blog.multiple-images': { populate: { images: true } },
         },
       },
     },
@@ -145,31 +156,14 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
 
 // 4. Get Home Page Data
 export async function getHomeData(): Promise<Home> {
-  const query = { populate: { hero: { fields: ['url', 'alternativeText', 'width', 'height'] } } };
+  const query = { populate: { hero: true } }; // FIX: Use true
   const res = await fetchAPI('/home', query);
   return (res?.data as Home) || ({} as Home);
 }
 
 // 5. Get Categories
 export async function getCategories(): Promise<Category[]> {
-  const query = { 
-    fields: ['name', 'description'], 
-    sort: ['name:asc'],
-    // Populate posts to check if the category is empty
-    populate: {
-      posts: {
-        fields: ['documentId'], // Fetch minimal data (ID only) to check count
-      }
-    }
-  };
-  
+  const query = { fields: ['name', 'description'], sort: ['name:asc'] };
   const res = await fetchAPI('/categories', query);
-  
-  if (!res?.data) return [];
-
-  // Filter: Return only categories that have at least one associated post
-  // We explicitly check if the 'posts' array exists and has length > 0
-  return res.data.filter((category: any) => 
-    category.posts && Array.isArray(category.posts) && category.posts.length > 0
-  );
+  return res?.data || [];
 }

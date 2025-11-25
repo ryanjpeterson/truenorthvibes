@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Post, Category, Pagination } from '@/types';
 import BlogCard from './BlogCard';
-import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Search, X } from 'lucide-react';
 
 interface PostListProps {
   posts: Post[];
@@ -15,20 +15,19 @@ interface PostListProps {
 export default function PostList({ posts, categories = [], pagination }: PostListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  
-  // 1. Create a ref for the container
   const listTopRef = useRef<HTMLDivElement>(null);
   
-  // Get current active category from URL
-  const currentCategory = searchParams.get('category');
+  // Get current state from URL
+  const currentCategory = searchParams.get('category') || "";
+  const currentSearch = searchParams.get('search') || "";
 
-  // Debugging: Check if categories are actually arriving
+  // Local state for search input to allow typing without instant reload
+  const [searchTerm, setSearchTerm] = useState(currentSearch);
+
   useEffect(() => {
-    console.log('PostList Categories:', categories);
-  }, [categories]);
+    setSearchTerm(currentSearch);
+  }, [currentSearch]);
 
-  // Helper to scroll to top
   const scrollToTop = () => {
     if (listTopRef.current) {
       setTimeout(() => {
@@ -37,8 +36,15 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
     }
   };
 
-  // 2. Handle Category Click (Desktop Buttons & Mobile Dropdown)
-  const handleCategoryChange = (categoryName: string | null) => {
+  const updateURL = (newParams: URLSearchParams) => {
+    // Always reset to page 1 on filter change
+    newParams.set('page', '1');
+    router.push(`/?${newParams.toString()}`, { scroll: false });
+    scrollToTop();
+  };
+
+  // 1. Handle Category Change (Dropdown)
+  const handleCategoryChange = (categoryName: string) => {
     const params = new URLSearchParams(searchParams.toString());
     
     if (categoryName) {
@@ -47,70 +53,51 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
       params.delete('category');
     }
     
-    // Reset to page 1 when filtering
-    params.set('page', '1');
-    
-    // Update URL with scroll: false to prevent full page jump
-    router.push(`/?${params.toString()}`, { scroll: false });
+    updateURL(params);
+  };
 
-    // Manually scroll to top of list
-    scrollToTop();
+  // 2. Handle Search Submit
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (searchTerm.trim()) {
+      params.set('search', searchTerm.trim());
+      // Reset category when searching to search all posts
+      params.delete('category'); 
+    } else {
+      params.delete('search');
+    }
+    
+    updateURL(params);
   };
 
   // 3. Handle Page Change
   const handlePageChange = (newPage: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('page', newPage.toString());
-    
     router.push(`/?${params.toString()}`, { scroll: false });
     scrollToTop();
   };
 
+  const clearAll = () => {
+    router.push('/', { scroll: false });
+    setSearchTerm("");
+    scrollToTop();
+  };
+
   return (
-    // Attach the ref to the container div with scroll margin
     <div ref={listTopRef} className="space-y-12 scroll-mt-24">
       
-      {/* Category Filter Section */}
-      <div className="w-full">
+      {/* Filters & Search Container */}
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
         
-        {/* Desktop View: Row of Buttons */}
-        <div className="hidden md:flex flex-wrap justify-start gap-4">
-          <button
-            onClick={() => handleCategoryChange(null)}
-            className={`w-24 px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 border flex justify-center items-center ${
-              !currentCategory
-                ? 'bg-blue-600 text-white border-blue-600 transform scale-105'
-                : 'bg-blue-50 text-blue-600 border-blue-100 hover:border-blue-300 hover:text-blue-500'
-            }`}
-          >
-            All
-          </button>
-          
-          {categories && categories.length > 0 ? (
-            categories.map((category) => (
-              <button
-                key={category.id}
-                onClick={() => handleCategoryChange(category.name)}
-                className={`w-24 px-4 py-2 rounded-md text-sm font-semibold transition-all duration-200 border flex justify-center items-center ${
-                  currentCategory === category.name
-                    ? 'bg-blue-600 text-white border-blue-600 transform scale-105'
-                    : 'bg-blue-50 text-blue-600 border-blue-100 hover:border-blue-300 hover:text-blue-500'
-                }`}
-              >
-                {category.name}
-              </button>
-            ))
-          ) : (
-            <span className="text-gray-400 text-xs flex items-center">No categories found</span>
-          )}
-        </div>
-
-        {/* Mobile View: Dropdown Menu */}
-        <div className="md:hidden relative">
+        {/* 1. Category Dropdown (Left) */}
+        <div className="relative min-w-[200px]">
           <select
-            value={currentCategory || ""}
-            onChange={(e) => handleCategoryChange(e.target.value || null)}
-            className="block w-full appearance-none bg-blue-50 border border-blue-100 text-blue-600 py-3 px-4 pr-8 rounded-md leading-tight focus:outline-none focus:bg-white focus:border-blue-500 shadow-sm transition-colors font-semibold text-sm"
+            value={currentCategory}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            className="block w-full appearance-none bg-gray-50 border border-gray-100 text-gray-800 py-3 px-4 pr-10 rounded-lg leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-semibold text-sm cursor-pointer"
           >
             <option value="">All Categories</option>
             {categories && categories.length > 0 && categories.map((category) => (
@@ -119,12 +106,51 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
               </option>
             ))}
           </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-blue-600">
-            <ChevronDown size={20} />
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-600">
+            <ChevronDown size={18} />
           </div>
         </div>
 
+        {/* 2. Search Bar (Right) */}
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 md:max-w-md">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={18} className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search posts..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-lg leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
+            />
+            {searchTerm && (
+              <button 
+                type="button"
+                onClick={() => { setSearchTerm(""); clearAll(); }}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </form>
+
       </div>
+
+      {/* Active Filters Feedback */}
+      {(currentCategory || currentSearch) && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 -mt-6 ml-1">
+          <span>Showing results for:</span>
+          {currentCategory && (
+            <span className="font-medium text-blue-800 bg-blue-50 px-2 py-0.5 rounded">Category: {currentCategory}</span>
+          )}
+          {currentSearch && (
+            <span className="font-medium text-blue-800 bg-blue-50 px-2 py-0.5 rounded">Search: &quot;{currentSearch}&quot;</span>
+          )}
+          <button onClick={clearAll} className="text-red-500 hover:underline ml-2 text-xs">Clear All</button>
+        </div>
+      )}
 
       {/* Blog Grid */}
       {posts.length > 0 ? (
@@ -135,7 +161,7 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
             ))}
           </div>
 
-          {/* Pagination Controls */}
+          {/* Pagination */}
           {pagination && pagination.pageCount > 1 && (
             <div className="flex justify-center items-center gap-4 mt-12">
               <button
@@ -150,11 +176,9 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
               >
                 <ChevronLeft size={20} />
               </button>
-              
               <span className="text-sm font-medium text-gray-600">
                 Page {pagination.page} of {pagination.pageCount}
               </span>
-
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.pageCount}
@@ -171,10 +195,10 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
           )}
         </>
       ) : (
-        <div className="text-center py-20">
-          <p className="text-xl text-gray-500">No posts found.</p>
+        <div className="text-center py-20 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+          <p className="text-xl text-gray-500">No posts found matching your criteria.</p>
           <button 
-            onClick={() => handleCategoryChange(null)}
+            onClick={clearAll}
             className="mt-4 text-blue-600 hover:underline font-medium"
           >
             Clear filters

@@ -52,7 +52,7 @@ export default function Hero({ title, subtitle, image, category }: HeroProps) {
                 // Updated styling: bg-blue-50, border-blue-100 (consistent with other tags)
                 // Note: On a dark hero background, we might want these to stand out more or be transparent/white border. 
                 // Sticking to the requested consistent "light blue" theme for now, but opaque.
-                className="inline-block bg-blue-50 text-blue-600 border border-blue-100 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-md cursor-default shadow-sm"
+                className="inline-block bg-blue-50 text-blue-600 border border-blue-100 text-xs font-bold tracking-wider px-3 py-1 rounded-md cursor-default shadow-sm"
               >
                 {category.name}
               </span>
