@@ -90,7 +90,7 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
     <div ref={listTopRef} className="space-y-12 scroll-mt-24">
       
       {/* Filters & Search Container */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center bg-white">
         
         {/* 1. Category Dropdown (Left) */}
         <div className="relative min-w-[200px]">
