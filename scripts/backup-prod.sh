@@ -6,7 +6,7 @@ VPS_HOST="${VPS_HOST:-vibes.ryanjpeterson.dev}"
 CONTAINER_NAME="blog_backend"
 
 # Directories
-LOCAL_BACKUP_DIR="./backups"
+LOCAL_BACKUP_DIR="./backend/backups"
 REMOTE_TMP_DIR="/tmp"
 
 # Ensure local backup directory exists
