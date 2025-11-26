@@ -148,7 +148,7 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
           {currentSearch && (
             <span className="font-medium text-blue-800 bg-blue-50 px-2 py-0.5 rounded">Search: &quot;{currentSearch}&quot;</span>
           )}
-          <button onClick={clearAll} className="text-red-500 hover:underline ml-2 text-xs">Clear All</button>
+          <button onClick={clearAll} className="font-medium text-red-800 bg-red-50 px-2 py-0.5 rounded hover:bg-red-100 hover:cursor-pointer">Clear All</button>
         </div>
       )}
 
