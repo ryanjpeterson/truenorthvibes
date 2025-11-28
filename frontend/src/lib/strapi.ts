@@ -34,7 +34,6 @@ async function fetchAPI(path: string, urlParamsObject = {}, options: FetchOption
       ...options,
     };
 
-    // Add a timeout to fail fast if the backend is hanging/down during build
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -46,7 +45,6 @@ async function fetchAPI(path: string, urlParamsObject = {}, options: FetchOption
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      // If response is not OK (e.g. 400), throw to catch block
       const errorText = await response.text();
       console.error(`🚨 Strapi API Error (${response.status}) at ${requestUrl}:`, errorText);
       throw new Error(`Strapi Error: ${response.status} ${response.statusText}`);
@@ -57,18 +55,13 @@ async function fetchAPI(path: string, urlParamsObject = {}, options: FetchOption
 
   } catch (error) {
     console.error('❌ Fetch API Execution Error:', error);
-    
-    // CRITICAL: If we are on the server (Build Time or ISR), we suppress the error 
-    // and return a safe fallback to allow the build to complete.
     if (isServer) {
       console.warn('⚠️ Returning empty fallback data to prevent build crash.');
-      
       return { 
         data: null, 
         meta: { pagination: { page: 1, pageSize: 0, pageCount: 0, total: 0 } } 
       };
     }
-    
     throw error;
   }
 }
@@ -80,7 +73,6 @@ interface GetPostsParams {
   search?: string;
 }
 
-// 1. Get List of Posts (HOME PAGE)
 export async function getPosts({ page = 1, pageSize = 12, category, search }: GetPostsParams = {}): Promise<StrapiResponse<Post[]>> {
   const query: Record<string, unknown> = {
     sort: ['date:desc'],
@@ -90,7 +82,6 @@ export async function getPosts({ page = 1, pageSize = 12, category, search }: Ge
       hero: true, 
       category: { fields: ['name', 'description'] },
       sponsor: { fields: ['name'], populate: { icon: true } },
-      // We still populate body to display the excerpt in the card
       body: {
         on: {
           'blog.text-block': { fields: ['content'] }
@@ -99,15 +90,19 @@ export async function getPosts({ page = 1, pageSize = 12, category, search }: Ge
     },
   };
 
-  // Filtering Logic
   const filters: any = {};
   
   if (category) {
     filters.category = { name: { $eq: category } };
   }
 
+  // --- CRITICAL FIX: The OR Filter ---
   if (search) {
-    filters.title = { $containsi: search };
+    const searchFilter = { $containsi: search };
+    filters.$or = [
+      { title: searchFilter },
+      { searchableContent: searchFilter } 
+    ];
   }
 
   if (Object.keys(filters).length > 0) {
@@ -125,7 +120,7 @@ export async function getPosts({ page = 1, pageSize = 12, category, search }: Ge
   return res; 
 }
 
-// 2. Get All Slugs
+// ... rest of the file stays the same
 export async function getPostSlugs() {
   const query = {
     fields: ['slug', 'updatedAt'], 
@@ -135,12 +130,10 @@ export async function getPostSlugs() {
   return res?.data || [];
 }
 
-// 3. Get Single Post (BLOG POST PAGE)
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   const query = {
     filters: { slug: { $eq: slug } },
     populate: {
-      // FIX: Use true
       hero: true, 
       category: { fields: ['name', 'description'] },
       sponsor: { fields: ['name', 'description', 'url'], populate: { icon: true } },
@@ -158,14 +151,12 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
   return res?.data && res.data.length > 0 ? res.data[0] : null;
 }
 
-// 4. Get Home Page Data
 export async function getHomeData(): Promise<Home> {
-  const query = { populate: { hero: true } }; // FIX: Use true
+  const query = { populate: { hero: true } };
   const res = await fetchAPI('/home', query);
   return (res?.data as Home) || ({} as Home);
 }
 
-// 5. Get Categories
 export async function getCategories(): Promise<Category[]> {
   const query = { fields: ['name', 'description'], sort: ['name:asc'] };
   const res = await fetchAPI('/categories', query);

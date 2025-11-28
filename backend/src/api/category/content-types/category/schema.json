@@ -25,6 +25,10 @@
       "relation": "oneToMany",
       "target": "api::post.post",
       "mappedBy": "category"
+    },
+    "searchableContent": {
+      "type": "text",
+      "private": true
     }
   }
 }

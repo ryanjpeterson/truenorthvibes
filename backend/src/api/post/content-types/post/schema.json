@@ -55,6 +55,9 @@
       "relation": "manyToOne",
       "target": "api::sponsor.sponsor",
       "inversedBy": "posts"
+    },
+    "searchableContent": {
+      "type": "string"
     }
   }
 }
