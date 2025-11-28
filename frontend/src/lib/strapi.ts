@@ -87,11 +87,15 @@ export async function getPosts({ page = 1, pageSize = 12, category, search }: Ge
     pagination: { page, pageSize },
     fields: ['title', 'slug', 'date'],
     populate: {
-      // FIX: Use true for hero population
       hero: true, 
       category: { fields: ['name', 'description'] },
-      // FIX: Use true for icon population inside sponsor
       sponsor: { fields: ['name'], populate: { icon: true } },
+      // We still populate body to display the excerpt in the card
+      body: {
+        on: {
+          'blog.text-block': { fields: ['content'] }
+        }
+      }
     },
   };
 

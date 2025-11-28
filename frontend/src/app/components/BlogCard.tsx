@@ -10,6 +10,29 @@ interface BlogCardProps {
   post: Post;
 }
 
+// Helper to extract plain text from Blocks (JSON) or String content
+const getExcerpt = (body: any[], length = 100) => {
+  if (!body || body.length === 0) return '';
+  
+  // Find the first text block
+  const textBlock = body.find(b => b.__component === 'blog.text-block');
+  if (!textBlock || !textBlock.content) return '';
+
+  let text = '';
+
+  // Handle Strapi Blocks (JSON) format
+  if (Array.isArray(textBlock.content)) {
+    text = textBlock.content
+      .map((node: any) => node.children?.map((child: any) => child.text).join(' ') || '');
+  } 
+  // Handle simple Rich Text (Markdown/String)
+  else if (typeof textBlock.content === 'string') {
+    text = textBlock.content;
+  }
+
+  return text.length > length ? text.substring(0, length) + '...' : text;
+};
+
 export default function BlogCard({ post }: BlogCardProps) {
   const hero = post.hero;
   const imageUrl = hero?.url
@@ -18,10 +41,13 @@ export default function BlogCard({ post }: BlogCardProps) {
 
   const sponsor = post.sponsor;
   const category = post.category;
+  const excerpt = getExcerpt(post.body || []);
 
   return (
-    <Link href={`/blog/${post.slug}`} className="group block">
-      <article className="flex flex-col h-[26rem] overflow-hidden rounded-xl shadow-sm hover:shadow-2xl transition-all duration-300 bg-white border border-gray-100">
+    <Link href={`/blog/${post.slug}`} className="group block h-full">
+      <article className="flex flex-col h-full overflow-hidden rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 bg-white border border-gray-100">
+        
+        {/* Image Section */}
         <div className="relative h-56 w-full overflow-hidden bg-gray-100 flex-shrink-0">
           {imageUrl ? (
             <Image
@@ -36,56 +62,51 @@ export default function BlogCard({ post }: BlogCardProps) {
               <span className="text-sm">No Image</span>
             </div>
           )}
-        </div>
-        
-        <div className="flex-1 p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-sm font-medium text-blue-600 mt-1">
-                {post.date ? format(parseISO(post.date), 'MMMM d, yyyy') : ''}
-              </p>
-              
-              {category && (
-                <span 
-                  className="inline-block bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md transition-colors"
-                >
-                  {category.name}
-                </span>
-              )}
-            </div>
-
-            <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-3 line-clamp-3">
-              {post.title}
-            </h3>
-          </div>
           
-          {sponsor && (
-            <div className="mt-4 pt-4 flex flex-col gap-2">
-              {(() => {
-                const sponsorIconUrl = sponsor.icon?.url
-                  ? (sponsor.icon.url.startsWith('http') ? sponsor.icon.url : getStrapiURL(sponsor.icon.url))
-                  : null;
-                
-                return (
-                  <div className="flex items-center bg-gray-50 border border-gray-100 rounded-lg p-2">
-                    <div className="relative w-6 h-6 mr-2 flex-shrink-0 rounded-full overflow-hidden bg-white">
-                      {sponsorIconUrl && (
-                        <Image 
-                          src={sponsorIconUrl} 
-                          alt={sponsor.name} 
-                          fill 
-                          className="object-cover"
-                        />
-                      )}
-                    </div>
-                    <span className="text-xs font-semibold tracking-wide truncate">
-                      Sponsored by {sponsor.name}
-                    </span>
-                  </div>
-                );
-              })()}
+          {category && (
+            <div className="absolute top-4 left-4">
+              <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+                {category.name}
+              </span>
             </div>
           )}
+        </div>
+        
+        {/* Content Section */}
+        <div className="flex-1 p-6 flex flex-col">
+          <div className="flex-1">
+            <p className="text-xs font-medium text-gray-500 mb-2">
+              {post.date ? format(parseISO(post.date), 'MMMM d, yyyy') : ''}
+            </p>
+
+            <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-3 line-clamp-2">
+              {post.title}
+            </h3>
+
+            <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+              {excerpt}
+            </p>
+          </div>
+          
+          {/* Sponsor */}
+          <div className="mt-4 pt-4 flex items-center justify-between gap-4">
+            {/* Sponsor (Compact) */}
+            {sponsor && (
+               <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+                 {sponsor.icon?.url && (
+                   <div className="relative w-4 h-4 rounded-full overflow-hidden">
+                    <Image 
+                      src={sponsor.icon.url.startsWith('http') ? sponsor.icon.url : getStrapiURL(sponsor.icon.url)}
+                      alt="Sponsor" 
+                      fill
+                      className="object-cover"
+                    />
+                   </div>
+                 )}
+                 <span className="text-[10px] font-bold text-gray-500 tracking-wider">Sponsored by {sponsor.name}</span>
+               </div>
+            )}
+          </div>
         </div>
       </article>
     </Link>
