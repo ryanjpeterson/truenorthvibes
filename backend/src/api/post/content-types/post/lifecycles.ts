@@ -25,11 +25,49 @@ const getPlainTextFromBody = (body: any[]) => {
   }).join(' ').trim();
 };
 
+// Helper to fetch draft content with deep population
+const getContentFromDraft = async (documentId: string, locale: string) => {
+  try {
+    const draft = await strapi.documents('api::post.post').findOne({
+      documentId,
+      locale,
+      status: 'draft',
+      // FIX: Deep populate the body dynamic zone to get nested 'content' fields
+      populate: {
+        body: {
+          populate: '*'
+        }
+      },
+    });
+
+    if (draft && draft.body) {
+      return getPlainTextFromBody(draft.body);
+    }
+  } catch (error) {
+    console.error('❌ [Lifecycle] Error fetching draft:', error);
+  }
+  return null;
+};
+
 export default {
   async beforeCreate(event) {
     const { data } = event.params;
-    if (data.body) {
-      data.searchableContent = getPlainTextFromBody(data.body);
+    
+    // 1. Try using payload body
+    let fullText = '';
+    if (data.body && Array.isArray(data.body) && data.body.some((b: any) => b.content)) {
+      fullText = getPlainTextFromBody(data.body);
+    }
+
+    // 2. If payload body is missing or sparse (e.g. during Publish), try fetching Draft
+    if (!fullText && data.documentId) {
+       // Note: data.locale might be needed depending on context, defaulting to data.locale
+       const draftText = await getContentFromDraft(data.documentId, data.locale);
+       if (draftText) fullText = draftText;
+    }
+
+    if (fullText) {
+      data.searchableContent = fullText;
     }
   },
 
@@ -51,24 +89,16 @@ export default {
       });
 
       if (entry && entry.documentId) {
-        // Explicitly fetch the 'draft' version to get the latest content
-        const draft = await strapi.documents('api::post.post').findOne({
-          documentId: entry.documentId,
-          locale: entry.locale,
-          status: 'draft', 
-          populate: ['body'],
-        });
-
-        if (draft && draft.body) {
-          const fullText = getPlainTextFromBody(draft.body);
-          if (fullText.length > 0) {
-            data.searchableContent = fullText;
-            console.log(`✅ [Lifecycle] Rebuilt searchableContent from DRAFT (${fullText.length} chars).`);
-          }
+        // Fetch draft with corrected populate
+        const fullText = await getContentFromDraft(entry.documentId, entry.locale);
+        
+        if (fullText && fullText.length > 0) {
+          data.searchableContent = fullText;
+          console.log(`✅ [Lifecycle] Rebuilt searchableContent from DRAFT (${fullText.length} chars).`);
         }
       }
     } catch (error) {
-      console.error('❌ [Lifecycle] Error fetching draft:', error);
+      console.error('❌ [Lifecycle] Error in beforeUpdate:', error);
     }
   },
 };
