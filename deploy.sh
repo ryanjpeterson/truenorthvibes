@@ -10,6 +10,7 @@ DEPLOY_STATE_FILE=".deploy_state"
 has_changed() {
     local SERVICE=$1
     local DIR=$2
+    local LAST_HASH=""
     
     if [ -f "$DEPLOY_STATE_FILE" ]; then
         LAST_HASH=$(grep "^${SERVICE}=" "$DEPLOY_STATE_FILE" | cut -d'=' -f2)
