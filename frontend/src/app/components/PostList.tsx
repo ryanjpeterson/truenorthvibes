@@ -93,7 +93,7 @@ export default function PostList({ posts, categories = [], pagination }: PostLis
             </div>
             <input
               type="text"
-              placeholder="Search title or content..." 
+              placeholder="Search posts..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-lg leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
