@@ -96,12 +96,12 @@ export async function getPosts({ page = 1, pageSize = 12, category, search }: Ge
     filters.category = { name: { $eq: category } };
   }
 
-  // --- CRITICAL FIX: The OR Filter ---
+  // --- FIX: Search Title OR Content (Case Insensitive) ---
   if (search) {
-    const searchFilter = { $containsi: search };
+    const searchFilter = { $containsi: search }; // 'i' means case-insensitive
     filters.$or = [
       { title: searchFilter },
-      { searchableContent: searchFilter } 
+      { searchableContent: searchFilter }
     ];
   }
 
@@ -120,7 +120,6 @@ export async function getPosts({ page = 1, pageSize = 12, category, search }: Ge
   return res; 
 }
 
-// ... rest of the file stays the same
 export async function getPostSlugs() {
   const query = {
     fields: ['slug', 'updatedAt'], 

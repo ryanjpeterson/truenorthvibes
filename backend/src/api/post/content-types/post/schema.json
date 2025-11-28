@@ -57,7 +57,7 @@
       "inversedBy": "posts"
     },
     "searchableContent": {
-      "type": "string"
+      "type": "text"
     }
   }
 }
