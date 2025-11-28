@@ -1,5 +1,5 @@
 services:
-  # 1. Database (Postgres)
+  # 1. Database
   postgres:
     image: postgres:16-alpine
     container_name: blog_postgres
@@ -19,17 +19,17 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Backend (Strapi)
-  backend:
+  # 2. Backend BLUE (Port 1337)
+  backend-blue:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    container_name: blog_backend
-    restart: unless-stopped
+    container_name: backend-blue
+    restart: always
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
+    environment: &backend_env
       NODE_ENV: production
       DATABASE_CLIENT: postgres
       DATABASE_HOST: postgres
@@ -59,7 +59,33 @@ services:
       retries: 5
       start_period: 20s
 
-  # 3. Frontend BLUE (Default Port 3000)
+  # 3. Backend GREEN (Port 1338)
+  backend-green:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: backend-green
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *backend_env
+      PORT: 1337 # Internal port is still 1337
+    ports:
+      - "1338:1337" # Host 1338 -> Container 1337
+    volumes:
+      - ./backend/public/uploads:/opt/app/public/uploads
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # 4. Frontend BLUE (Port 3000)
   frontend-blue:
     build:
       context: .
@@ -67,25 +93,23 @@ services:
       args:
         NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
         NEXT_PUBLIC_SITE_NAME: "True North Vibes"
-        STRAPI_INTERNAL_URL: http://backend:1337
+        STRAPI_INTERNAL_URL: http://backend-blue:1337 # Fallback, but Nginx handles routing
     container_name: frontend-blue
     restart: always
     ports:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-      STRAPI_INTERNAL_URL: http://backend:1337
     networks:
       - app-network
-    # Healthcheck is CRITICAL for the deploy script to know when build is done
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 10s
       timeout: 5s
-      retries: 20 # Give it time to build (20 * 10s = ~3 mins max)
+      retries: 20
       start_period: 30s
 
-  # 4. Frontend GREEN (Alt Port 3001)
+  # 5. Frontend GREEN (Port 3001)
   frontend-green:
     build:
       context: .
@@ -93,14 +117,13 @@ services:
       args:
         NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
         NEXT_PUBLIC_SITE_NAME: "True North Vibes"
-        STRAPI_INTERNAL_URL: http://backend:1337
+        STRAPI_INTERNAL_URL: http://backend-green:1337
     container_name: frontend-green
     restart: always
     ports:
-      - "3001:3000" # Map host 3001 to container 3000
+      - "3001:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-      STRAPI_INTERNAL_URL: http://backend:1337
     networks:
       - app-network
     healthcheck:
