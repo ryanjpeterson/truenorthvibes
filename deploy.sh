@@ -7,27 +7,22 @@ DEPLOY_STATE_FILE=".deploy_state"
 
 # --- Helper Functions ---
 
-# $1 = Service Name (e.g., "backend" or "frontend")
-# $2 = Directory to check for changes (e.g., "backend/" or "frontend/")
 has_changed() {
     local SERVICE=$1
     local DIR=$2
     
-    # Get the last deployed commit hash for this service
     if [ -f "$DEPLOY_STATE_FILE" ]; then
         LAST_HASH=$(grep "^${SERVICE}=" "$DEPLOY_STATE_FILE" | cut -d'=' -f2)
     fi
 
-    # If no record exists, force deploy
     if [ -z "$LAST_HASH" ]; then
-        return 0 # True
+        return 0 
     fi
 
-    # Check for diffs between last deploy and HEAD
     if git diff --quiet "$LAST_HASH" HEAD -- "$DIR"; then
-        return 1 # False (No changes)
+        return 1 
     else
-        return 0 # True (Changes found)
+        return 0 
     fi
 }
 
@@ -35,7 +30,6 @@ update_deploy_state() {
     local SERVICE=$1
     local CURRENT_HASH=$(git rev-parse HEAD)
     
-    # Update or append the hash in the state file
     if grep -q "^${SERVICE}=" "$DEPLOY_STATE_FILE"; then
         sed -i "s/^${SERVICE}=.*/${SERVICE}=${CURRENT_HASH}/" "$DEPLOY_STATE_FILE"
     else
@@ -43,10 +37,6 @@ update_deploy_state() {
     fi
 }
 
-# $1 = Service Name (e.g., "backend")
-# $2 = Blue Port
-# $3 = Green Port
-# $4 = Nginx Sed Pattern (regex to replace port)
 deploy_service() {
     local SERVICE_NAME=$1
     local PORT_BLUE=$2
@@ -61,7 +51,6 @@ deploy_service() {
         TARGET_COLOR="green"
         TARGET_PORT="$PORT_GREEN"
     else
-        # Default to green if blue isn't running (or first run)
         CURRENT_COLOR="green"
         TARGET_COLOR="blue"
         TARGET_PORT="$PORT_BLUE"
@@ -72,6 +61,8 @@ deploy_service() {
 
     # Build and Start Target
     echo "   🏗️  Building ${SERVICE_NAME}-${TARGET_COLOR}..."
+    
+    # NOTE: STRAPI_INTERNAL_URL is picked up from the environment export below
     docker compose up -d --build --no-deps "${SERVICE_NAME}-${TARGET_COLOR}"
 
     # Wait for Health
@@ -79,6 +70,7 @@ deploy_service() {
     LAST_LOG_TIME="0s"
     
     while [ "$(docker inspect -f '{{.State.Health.Status}}' "${SERVICE_NAME}-${TARGET_COLOR}")" != "healthy" ]; do
+        # Stream logs to see progress
         docker logs "${SERVICE_NAME}-${TARGET_COLOR}" --since "$LAST_LOG_TIME" 2>&1 | tail -n 5
         LAST_LOG_TIME="5s"
 
@@ -92,15 +84,9 @@ deploy_service() {
 
     echo "   ✅ ${SERVICE_NAME}-${TARGET_COLOR} is Healthy!"
 
-    # Update Nginx Config
-    # We use the provided regex pattern to replace the port in the config
-    # Example Regex: s/localhost:133[7-8]/localhost:1338/g
     local SED_CMD="s/${NGINX_REGEX}/localhost:${TARGET_PORT}/g"
     sudo sed -i "$SED_CMD" "$NGINX_REGEX_PATH"
 
-    # We defer Nginx reload to the very end to batch updates
-    
-    # Store the target color to stop the old one later
     eval "${SERVICE_NAME}_TARGET_COLOR=${TARGET_COLOR}"
     eval "${SERVICE_NAME}_CURRENT_COLOR=${CURRENT_COLOR}"
 }
@@ -111,32 +97,49 @@ echo "============================================"
 echo "🚀 STARTING SMART ZERO-DOWNTIME DEPLOYMENT"
 echo "============================================"
 
-# Ensure Postgres is up (Shared Resource)
 echo "🗄️  Ensuring Database is up..."
 docker compose up -d postgres
-# Simple wait for postgres
 sleep 5
 
-# 1. CHECK & DEPLOY BACKEND
+# ----------------------------
+# 1. BACKEND DEPLOYMENT
+# ----------------------------
 DEPLOYED_BACKEND=false
+ACTIVE_BACKEND_COLOR=""
+
 if has_changed "backend" "backend/"; then
     echo "📦 Changes detected in Backend. Deploying..."
-    # Regex explains: Replace localhost:1337 or 1338 with new port
     NGINX_REGEX_PATH=$NGINX_CONFIG_PATH
     deploy_service "backend" "1337" "1338" "localhost:133[7-8]"
     update_deploy_state "backend"
     DEPLOYED_BACKEND=true
+    # The active color is now the target of the deployment
+    ACTIVE_BACKEND_COLOR=$backend_TARGET_COLOR
 else
     echo "zzz No changes in Backend. Skipping."
-    # We still need to know the 'current' color if we want to stop nothing, 
-    # but strictly we only stop if we deployed.
+    # Detect which backend is CURRENTLY running so we can link the frontend to it
+    if docker ps --format '{{.Names}}' | grep -q "backend-blue"; then
+        ACTIVE_BACKEND_COLOR="blue"
+    else
+        ACTIVE_BACKEND_COLOR="green"
+    fi
+    echo "ℹ️  Active Backend is: $ACTIVE_BACKEND_COLOR"
 fi
 
-# 2. CHECK & DEPLOY FRONTEND
+# ----------------------------
+# CRITICAL: SET BACKEND URL
+# ----------------------------
+# This variable is passed to docker-compose so the frontend knows who to talk to
+export STRAPI_INTERNAL_URL="http://backend-${ACTIVE_BACKEND_COLOR}:1337"
+echo "🔗 Frontend will connect to: $STRAPI_INTERNAL_URL"
+
+
+# ----------------------------
+# 2. FRONTEND DEPLOYMENT
+# ----------------------------
 DEPLOYED_FRONTEND=false
 if has_changed "frontend" "frontend/"; then
     echo "📦 Changes detected in Frontend. Deploying..."
-    # Regex explains: Replace localhost:3000 or 3001 with new port
     NGINX_REGEX_PATH=$NGINX_CONFIG_PATH
     deploy_service "frontend" "3000" "3001" "localhost:300[0-1]"
     update_deploy_state "frontend"
@@ -145,7 +148,10 @@ else
     echo "zzz No changes in Frontend. Skipping."
 fi
 
-# 3. RELOAD NGINX (If anything changed)
+
+# ----------------------------
+# 3. RELOAD NGINX
+# ----------------------------
 if [ "$DEPLOYED_BACKEND" = true ] || [ "$DEPLOYED_FRONTEND" = true ]; then
     echo "✨ Reloading Nginx to apply traffic switch..."
     sudo nginx -t
@@ -155,7 +161,10 @@ else
     echo "✨ No deployments made. Nginx reload skipped."
 fi
 
-# 4. CLEANUP OLD CONTAINERS
+
+# ----------------------------
+# 4. CLEANUP
+# ----------------------------
 cleanup() {
     local SERVICE=$1
     local TARGET=$2

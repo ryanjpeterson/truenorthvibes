@@ -19,123 +19,112 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Backend BLUE (Port 1337)
-  backend-blue:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: backend-blue
-    restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment: &backend_env
-      NODE_ENV: production
-      DATABASE_CLIENT: postgres
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: ${DATABASE_NAME}
-      DATABASE_USERNAME: ${DATABASE_USERNAME}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      DATABASE_SSL: "false"
-      JWT_SECRET: ${JWT_SECRET}
-      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
-      APP_KEYS: ${APP_KEYS}
-      API_TOKEN_SALT: ${API_TOKEN_SALT}
-      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
-      PUBLIC_URL: ${NEXT_PUBLIC_STRAPI_URL}
-      HOST: 0.0.0.0
-      PORT: 1337
-    ports:
-      - "1337:1337"
-    volumes:
-      - ./backend/public/uploads:/opt/app/public/uploads
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+  # 2. Backend BLUE
+    backend-blue:
+      build:
+        context: .
+        dockerfile: Dockerfile.backend
+      container_name: backend-blue
+      restart: always
+      depends_on:
+        postgres:
+          condition: service_healthy
+      environment: &backend_env
+        # ... (Keep your existing env vars) ...
+        HOST: 0.0.0.0
+        PORT: 1337
+      ports:
+        - "1337:1337"
+      networks:
+        - app-network
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
+        interval: 15s
+        timeout: 5s
+        retries: 5
+        start_period: 20s
 
-  # 3. Backend GREEN (Port 1338)
-  backend-green:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: backend-green
-    restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      <<: *backend_env
-      PORT: 1337 # Internal port is still 1337
-    ports:
-      - "1338:1337" # Host 1338 -> Container 1337
-    volumes:
-      - ./backend/public/uploads:/opt/app/public/uploads
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+    # 3. Backend GREEN
+    backend-green:
+      build:
+        context: .
+        dockerfile: Dockerfile.backend
+      container_name: backend-green
+      restart: always
+      depends_on:
+        postgres:
+          condition: service_healthy
+      environment:
+        <<: *backend_env
+        PORT: 1337
+      ports:
+        - "1338:1337"
+      networks:
+        - app-network
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
+        interval: 15s
+        timeout: 5s
+        retries: 5
+        start_period: 20s
 
-  # 4. Frontend BLUE (Port 3000)
-  frontend-blue:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-      args:
+    # 4. Frontend BLUE
+    frontend-blue:
+      build:
+        context: .
+        dockerfile: Dockerfile.frontend
+        args:
+          NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
+          NEXT_PUBLIC_SITE_NAME: "True North Vibes"
+          # CHANGE: Use variable instead of hardcoded backend-blue
+          STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
+      container_name: frontend-blue
+      restart: always
+      ports:
+        - "3000:3000"
+      environment:
         NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-        NEXT_PUBLIC_SITE_NAME: "True North Vibes"
-        STRAPI_INTERNAL_URL: http://backend-blue:1337 # Fallback, but Nginx handles routing
-    container_name: frontend-blue
-    restart: always
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
+        # CHANGE: Pass the variable to runtime as well
+        STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
+      networks:
+        - app-network
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+        interval: 10s
+        timeout: 5s
+        retries: 20
+        start_period: 30s
 
-  # 5. Frontend GREEN (Port 3001)
-  frontend-green:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-      args:
+    # 5. Frontend GREEN
+    frontend-green:
+      build:
+        context: .
+        dockerfile: Dockerfile.frontend
+        args:
+          NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
+          NEXT_PUBLIC_SITE_NAME: "True North Vibes"
+          # CHANGE: Use variable instead of hardcoded backend-green
+          STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
+      container_name: frontend-green
+      restart: always
+      ports:
+        - "3001:3000"
+      environment:
         NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-        NEXT_PUBLIC_SITE_NAME: "True North Vibes"
-        STRAPI_INTERNAL_URL: http://backend-green:1337
-    container_name: frontend-green
-    restart: always
-    ports:
-      - "3001:3000"
-    environment:
-      NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
+        # CHANGE: Pass the variable to runtime as well
+        STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
+      networks:
+        - app-network
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+        interval: 10s
+        timeout: 5s
+        retries: 20
+        start_period: 30s
 
-networks:
-  app-network:
-    driver: bridge
+  networks:
+    app-network:
+      driver: bridge
 
-volumes:
-  postgres_data:
+  volumes:
+    postgres_data:
