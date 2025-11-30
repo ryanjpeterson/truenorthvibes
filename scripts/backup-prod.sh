@@ -3,64 +3,59 @@
 # --- Configuration ---
 VPS_USER="${VPS_USER:-debian}"
 VPS_HOST="${VPS_HOST:-vibes.ryanjpeterson.dev}"
-CONTAINER_NAME="blog_backend"
 
-# Directories
+# Local directory where files will be saved
 LOCAL_BACKUP_DIR="./backend/backups"
 REMOTE_TMP_DIR="/tmp"
 
-# Ensure local backup directory exists
 mkdir -p "$LOCAL_BACKUP_DIR"
-
-# --- Filename Handling ---
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-# 1. The name we pass to Strapi (NO extension, Strapi adds .tar.gz automatically)
-EXPORT_BASENAME="strapi-export-$TIMESTAMP"
-# 2. The actual filename we look for and copy (WITH extension)
-EXPORT_FILENAME="${EXPORT_BASENAME}.tar.gz"
 
 echo "🚀 Starting production backup..."
 echo "📍 Target: $VPS_USER@$VPS_HOST"
-echo "📦 Container: $CONTAINER_NAME"
-echo "📄 Export Name: $EXPORT_FILENAME"
 
-# 1. SSH into Server to Generate Export
+# --- 1. Detect Running Container ---
+echo "🔍 Detecting running backend container..."
+CONTAINER_NAME=$(ssh "$VPS_USER@$VPS_HOST" "sudo docker ps --format '{{.Names}}' | grep 'backend-' | head -n 1")
+
+if [ -z "$CONTAINER_NAME" ]; then
+    echo "❌ Error: No running container found matching 'backend-'."
+    exit 1
+fi
+echo "📦 Found active container: $CONTAINER_NAME"
+
+# --- Filename Handling ---
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+EXPORT_BASENAME="strapi-export-$TIMESTAMP"
+EXPORT_FILENAME="${EXPORT_BASENAME}.tar.gz"
+
+# --- 2. Generate Export on VPS ---
 echo "🔄 Connecting to remote to run Strapi export..."
 ssh -t "$VPS_USER@$VPS_HOST" "
-    # Stop script on first error
     set -e 
 
-    echo '   >> 🐳 Running export inside container...'
-    # Pass the BASENAME (no extension) to the --file argument
+    echo '   >> 🐳 Running export inside $CONTAINER_NAME...'
     sudo docker exec $CONTAINER_NAME npm run strapi -- export --no-encrypt --file $EXPORT_BASENAME
-
-    echo '   >> 🔍 Verifying file creation...'
-    # Check for the file with the extension added
-    if ! sudo docker exec $CONTAINER_NAME test -f /opt/app/$EXPORT_FILENAME; then
-        echo '❌ Error: Export file not found in container!'
-        echo '   >> 📂 Listing files in /opt/app for debugging:'
-        sudo docker exec $CONTAINER_NAME ls -la /opt/app
-        exit 1
-    fi
 
     echo '   >> 📂 Copying file from container to host...'
     sudo docker cp $CONTAINER_NAME:/opt/app/$EXPORT_FILENAME $REMOTE_TMP_DIR/$EXPORT_FILENAME
 
     echo '   >> 🧹 Cleaning up inside container...'
     sudo docker exec $CONTAINER_NAME rm /opt/app/$EXPORT_FILENAME
+    
+    # Change ownership of the temp file on host so 'debian' user can download and delete it
+    sudo chown $VPS_USER:$VPS_USER $REMOTE_TMP_DIR/$EXPORT_FILENAME
 "
 
-# Check if SSH command succeeded
 if [ $? -ne 0 ]; then
-    echo "❌ Remote backup process failed. Aborting download."
+    echo "❌ Remote backup process failed."
     exit 1
 fi
 
-# 2. Download the file from VPS Host to Local
+# --- 3. Download to Local ---
 echo "⬇️  Downloading backup to $LOCAL_BACKUP_DIR..."
 scp "$VPS_USER@$VPS_HOST:$REMOTE_TMP_DIR/$EXPORT_FILENAME" "$LOCAL_BACKUP_DIR/$EXPORT_FILENAME"
 
-# 3. Cleanup on VPS Host
+# --- 4. Cleanup on VPS ---
 echo "🧹 Cleaning up temporary file on remote host..."
 ssh -t "$VPS_USER@$VPS_HOST" "rm $REMOTE_TMP_DIR/$EXPORT_FILENAME"
 
