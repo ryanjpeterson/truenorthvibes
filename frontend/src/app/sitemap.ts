@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { getPostSlugs, getCategories } from '@/lib/strapi';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = 'https://vibes.ryanjpeterson.dev'; 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'; 
 
   // 1. Static Routes
   const staticRoutes: MetadataRoute.Sitemap = [

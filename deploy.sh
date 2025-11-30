@@ -2,7 +2,7 @@
 set -e
 
 # --- Configuration ---
-NGINX_CONFIG_PATH="/etc/nginx/sites-available/vibes.ryanjpeterson.dev"
+NGINX_CONFIG_PATH="/etc/nginx/sites-available/${DOMAIN_NAME}" 
 DEPLOY_STATE_FILE=".deploy_state"
 
 # --- Helper Functions ---

@@ -27,7 +27,9 @@ const nextConfig: NextConfig = {
       // Add your production domain
       {
         protocol: 'https',
-        hostname: 'vibes.ryanjpeterson.dev',
+        hostname: process.env.NEXT_PUBLIC_SITE_URL 
+          ? new URL(process.env.NEXT_PUBLIC_SITE_URL).hostname 
+          : 'localhost', // 
         port: '',
         pathname: '/uploads/**',
       },
