@@ -1,6 +1,18 @@
 #!/bin/bash
 set -e
 
+# 1. LOAD ENV VARS FIRST
+# This must happen before you use $DOMAIN_NAME below
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+fi
+
+# 2. Check if DOMAIN_NAME is set (Safety check)
+if [ -z "$DOMAIN_NAME" ]; then
+  echo "❌ Error: DOMAIN_NAME is empty. Check your .env file."
+  exit 1
+fi
+
 # --- Configuration ---
 NGINX_CONFIG_PATH="/etc/nginx/sites-available/${DOMAIN_NAME}" 
 DEPLOY_STATE_FILE=".deploy_state"
