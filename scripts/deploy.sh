@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+FORCE_DEPLOY=false
+if [[ "$1" == "--force" ]]; then
+    echo "⚠️  Force mode enabled: Ignoring git changes."
+    FORCE_DEPLOY=true
+fi
+
 # 1. LOAD ENV VARS FIRST
 # This must happen before you use $DOMAIN_NAME below
 if [ -f .env ]; then
@@ -23,6 +29,10 @@ has_changed() {
     local SERVICE=$1
     local DIR=$2
     local LAST_HASH=""
+    
+    if [ "$FORCE_DEPLOY" = true ]; then
+        return 0
+    fi
     
     if [ -f "$DEPLOY_STATE_FILE" ]; then
         LAST_HASH=$(grep "^${SERVICE}=" "$DEPLOY_STATE_FILE" | cut -d'=' -f2)
