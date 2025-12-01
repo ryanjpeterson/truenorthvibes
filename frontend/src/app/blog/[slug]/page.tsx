@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: 'Post Not Found' };
   }
 
-  const siteName = process.env.NEXT_PUBLIC_SITE_NAME || 'True North Vibes';
+  const siteName = 'True North Vibes';
   const hero = post.hero;
   const imageUrl = hero?.url 
     ? (hero.url.startsWith('http') ? hero.url : getStrapiURL(hero.url))
