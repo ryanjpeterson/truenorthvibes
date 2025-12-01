@@ -10,15 +10,19 @@ BACKUP_FILE="$1"
 FILENAME=$(basename "$BACKUP_FILE")
 
 # --- Configuration ---
-VPS_USER="${VPS_USER:-debian}"
-VPS_HOST="${VPS_HOST:-vibes.ryanjpeterson.dev}"
+VPS_USER="${VPS_USER}"
+VPS_HOST="${VPS_HOST}"
 REMOTE_TMP_DIR="/tmp"
 
 echo "🚀 Starting production restore..."
 echo "📍 Target: $VPS_USER@$VPS_HOST"
 echo "📂 Backup file: $BACKUP_FILE"
 
-# --- 1. Upload Backup to VPS ---
+# --- 1. Clean Previous Attempts (Fixes 'Permission denied') ---
+echo "🧹 Cleaning up any existing temporary file on VPS..."
+ssh "$VPS_USER@$VPS_HOST" "sudo rm -f $REMOTE_TMP_DIR/$FILENAME"
+
+# --- 2. Upload Backup to VPS ---
 echo "⬆️  Uploading backup to VPS ($REMOTE_TMP_DIR)..."
 scp "$BACKUP_FILE" "$VPS_USER@$VPS_HOST:$REMOTE_TMP_DIR/$FILENAME"
 
@@ -27,7 +31,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# --- 2. Remote Restore Process ---
+# --- 3. Remote Restore Process ---
 echo "🔄 Connecting to remote to run Strapi import..."
 ssh -t "$VPS_USER@$VPS_HOST" "
     set -e
@@ -47,8 +51,8 @@ ssh -t "$VPS_USER@$VPS_HOST" "
     sudo docker cp $REMOTE_TMP_DIR/$FILENAME \$CONTAINER_NAME:/opt/app/$FILENAME
 
     # C. Run Strapi Import
-    # Note: --force is required to overwrite existing content
     echo '   >> 🐳 Running import inside \$CONTAINER_NAME...'
+    # Using --force to bypass the confirmation prompt
     sudo docker exec \$CONTAINER_NAME npm run strapi -- import --force --file $FILENAME
 
     # D. Cleanup
@@ -56,7 +60,7 @@ ssh -t "$VPS_USER@$VPS_HOST" "
     sudo docker exec \$CONTAINER_NAME rm /opt/app/$FILENAME
 
     echo '   >> 🧹 Cleaning up host file...'
-    rm $REMOTE_TMP_DIR/$FILENAME
+    sudo rm $REMOTE_TMP_DIR/$FILENAME
 "
 
 echo "✅ Restore complete!"
