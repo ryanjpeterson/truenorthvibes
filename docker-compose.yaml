@@ -47,7 +47,7 @@ services:
       HOST: 0.0.0.0
       PORT: 1337
     ports:
-      - "1337:1337"
+      - "127.0.0.1:1337:1337"
     volumes:
       - ./backend/public:/opt/app/public
     networks:
@@ -73,7 +73,7 @@ services:
       <<: *backend_env
       PORT: 1337
     ports:
-      - "1338:1337"
+      - "127.0.0.1:1338:1337"
     volumes:
       - ./backend/public:/opt/app/public
     networks:
@@ -98,7 +98,7 @@ services:
     container_name: frontend-blue
     restart: always
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
       STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
@@ -124,7 +124,7 @@ services:
     container_name: frontend-green
     restart: always
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
       STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
