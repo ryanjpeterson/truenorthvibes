@@ -1,50 +1,34 @@
 # -----------------------------------------------------------------------------
-# Service: Strapi 5 Backend (Multi-Stage Build)
+# Service: Strapi 5 Backend
+# Location: /Dockerfile.backend (Root Directory)
 # -----------------------------------------------------------------------------
+FROM node:20-alpine
 
-# --- Stage 1: Builder ---
-FROM node:20-alpine AS builder
-
-# Install build dependencies (Python/GCC needed for node-gyp if sqlite is present)
-RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git python3
+# Install system dependencies required by Strapi/Sharp
+# libvips-dev is crucial for image processing in Strapi
+# ADDED: curl (Required for Docker Healthchecks in deploy.sh)
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git curl
 
 WORKDIR /opt/app
 
-# Install dependencies
+# Copy package files first to leverage cache
 COPY backend/package.json backend/package-lock.json ./
-RUN npm ci
 
-# Copy source and build
+# Clean npm cache to prevent EINTEGRITY errors from corrupted downloads
+RUN npm cache clean --force
+
+# 1. Install dependencies (Try 'ci' for speed, fallback to 'install' to fix lockfile issues)
+# 2. Explicitly install 'pg' (Postgres driver) because it's missing from the SQLite-based package.json
+RUN (npm ci || npm install) && npm install pg
+
+# Copy the rest of the application code
 COPY backend/ .
-ENV NODE_ENV=production
+
+# Build Strapi admin panel
 RUN npm run build
 
-# --- Stage 2: Runner ---
-FROM node:20-alpine AS runner
-
-# Install runtime dependencies (vips-dev for Sharp, curl for Healthcheck)
-RUN apk add --no-cache vips-dev curl
-
-WORKDIR /opt/app
-
-ENV NODE_ENV=production
-
-# Copy artifacts
-# 1. The compiled server code
-COPY --from=builder /opt/app/dist ./dist
-# 2. The compiled Admin Panel (CRITICAL)
-COPY --from=builder /opt/app/build ./build
-# 3. Public assets
-COPY --from=builder /opt/app/public ./public
-COPY --from=builder /opt/app/favicon.png ./favicon.png
-# 4. Package files
-COPY --from=builder /opt/app/package.json ./package.json
-COPY --from=builder /opt/app/package-lock.json ./package-lock.json
-
-# Install production dependencies
-# We use --ignore-scripts to prevent better-sqlite3 from trying to build if it's still there
-RUN npm ci --omit=dev --ignore-scripts && npm install pg
-
+# Expose the Strapi port
 EXPOSE 1337
 
+# Start the application
 CMD ["npm", "run", "start"]
