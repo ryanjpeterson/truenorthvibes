@@ -1,55 +1,34 @@
 # -----------------------------------------------------------------------------
-# Service: Strapi 5 Backend (Fix: Dependencies + Config Compilation)
-# Location: /Dockerfile.backend
+# Service: Strapi 5 Backend
+# Location: /Dockerfile.backend (Root Directory)
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS base
+FROM node:20-alpine
 
-# 1. Build Stage
-FROM base AS build
-# Install build tools for native modules (sharp, sqlite, etc.)
-RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git
+# Install system dependencies required by Strapi/Sharp
+# libvips-dev is crucial for image processing in Strapi
+# ADDED: curl (Required for Docker Healthchecks in deploy.sh)
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git curl
 
 WORKDIR /opt/app
 
-# Copy package files
+# Copy package files first to leverage cache
 COPY backend/package.json backend/package-lock.json ./
 
-# Install dependencies (Force install to ensure we have everything)
-RUN npm install
+# Clean npm cache to prevent EINTEGRITY errors from corrupted downloads
+RUN npm cache clean --force
 
-# Copy source code
+# 1. Install dependencies (Try 'ci' for speed, fallback to 'install' to fix lockfile issues)
+# 2. Explicitly install 'pg' (Postgres driver) because it's missing from the SQLite-based package.json
+RUN (npm ci || npm install) && npm install pg
+
+# Copy the rest of the application code
 COPY backend/ .
 
-# --- FIX 1: Ensure Postgres driver is present ---
-RUN npm install pg --save
-
-# --- FIX 2: Overwrite tsconfig.json to GUARANTEE config compilation ---
-# This ensures 'config/' is compiled to 'dist/config/', which prevents the startup crash.
-RUN echo '{"extends":"@strapi/typescript-utils/tsconfigs/server","compilerOptions":{"outDir":"dist","rootDir":"."},"include":["src/**/*.json","src/**/*.ts","config/**/*.ts","types/**/*.d.ts"],"exclude":["node_modules","dist","public","build",".cache",".tmp"]}' > tsconfig.json
-
-# Build the project
+# Build Strapi admin panel
 RUN npm run build
 
-# Debug: Check if config was actually compiled (This will show in build logs if it fails)
-RUN ls -la dist/config
-
-# 2. Runner Stage
-FROM base AS runner
-ENV NODE_ENV=production
-
-# Install runtime libs
-RUN apk add --no-cache vips-dev curl
-
-WORKDIR /opt/app
-
-# Copy built artifacts and node_modules
-# We copy the entire 'dist' folder to ensure we get the compiled config
-COPY --from=build /opt/app/node_modules ./node_modules
-COPY --from=build /opt/app/dist ./dist
-COPY --from=build /opt/app/public ./public
-COPY --from=build /opt/app/package.json ./package.json
-COPY --from=build /opt/app/favicon.png ./favicon.png
-
+# Expose the Strapi port
 EXPOSE 1337
 
+# Start the application
 CMD ["npm", "run", "start"]
