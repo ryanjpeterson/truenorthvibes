@@ -1,12 +1,12 @@
 # -----------------------------------------------------------------------------
-# Service: Strapi 5 Backend (TSConfig Fix & Universal DB Support)
+# Service: Strapi 5 Backend (Fix: Dependencies + Config Compilation)
 # Location: /Dockerfile.backend
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS base
 
 # 1. Build Stage
 FROM base AS build
-# Install build tools for native modules (sharp, better-sqlite3)
+# Install build tools for native modules (sharp, sqlite, etc.)
 RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git
 
 WORKDIR /opt/app
@@ -14,18 +14,24 @@ WORKDIR /opt/app
 # Copy package files
 COPY backend/package.json backend/package-lock.json ./
 
-# Install ALL dependencies (including devDependencies like typescript)
+# Install dependencies (Force install to ensure we have everything)
 RUN npm install
 
 # Copy source code
 COPY backend/ .
 
-# --- CRITICAL FIX: Overwrite tsconfig.json to ensure 'config' is compiled ---
-# This forces the compiler to include the config folder in the dist output
+# --- FIX 1: Ensure Postgres driver is present ---
+RUN npm install pg --save
+
+# --- FIX 2: Overwrite tsconfig.json to GUARANTEE config compilation ---
+# This ensures 'config/' is compiled to 'dist/config/', which prevents the startup crash.
 RUN echo '{"extends":"@strapi/typescript-utils/tsconfigs/server","compilerOptions":{"outDir":"dist","rootDir":"."},"include":["src/**/*.json","src/**/*.ts","config/**/*.ts","types/**/*.d.ts"],"exclude":["node_modules","dist","public","build",".cache",".tmp"]}' > tsconfig.json
 
-# Build Admin Panel & Backend
+# Build the project
 RUN npm run build
+
+# Debug: Check if config was actually compiled (This will show in build logs if it fails)
+RUN ls -la dist/config
 
 # 2. Runner Stage
 FROM base AS runner
@@ -37,7 +43,7 @@ RUN apk add --no-cache vips-dev curl
 WORKDIR /opt/app
 
 # Copy built artifacts and node_modules
-# We copy the entire dist folder, which now DEFINITELY contains config/database.js
+# We copy the entire 'dist' folder to ensure we get the compiled config
 COPY --from=build /opt/app/node_modules ./node_modules
 COPY --from=build /opt/app/dist ./dist
 COPY --from=build /opt/app/public ./public
