@@ -1,34 +1,47 @@
 # -----------------------------------------------------------------------------
-# Service: Strapi 5 Backend
-# Location: /Dockerfile.backend (Root Directory)
+# Service: Strapi 5 Backend (Optimized Multi-Stage)
+# Location: /Dockerfile.backend
 # -----------------------------------------------------------------------------
-FROM node:20-alpine
+FROM node:20-alpine AS base
 
-# Install system dependencies required by Strapi/Sharp
-# libvips-dev is crucial for image processing in Strapi
-# ADDED: curl (Required for Docker Healthchecks in deploy.sh)
-RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git curl
+# 1. Build Stage
+FROM base AS build
+# Install dependencies required for building native modules (sharp, etc.)
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git
 
 WORKDIR /opt/app
 
-# Copy package files first to leverage cache
 COPY backend/package.json backend/package-lock.json ./
 
-# Clean npm cache to prevent EINTEGRITY errors from corrupted downloads
-RUN npm cache clean --force
-
-# 1. Install dependencies (Try 'ci' for speed, fallback to 'install' to fix lockfile issues)
-# 2. Explicitly install 'pg' (Postgres driver) because it's missing from the SQLite-based package.json
+# CRITICAL FIX: Install dependencies INCLUDING 'pg' (Postgres driver)
+# We allow 'npm install' as fallback if 'npm ci' fails due to lockfile mismatches
 RUN (npm ci || npm install) && npm install pg
 
-# Copy the rest of the application code
 COPY backend/ .
 
-# Build Strapi admin panel
+# Build the admin panel (requires devDependencies)
 RUN npm run build
 
-# Expose the Strapi port
+# OPTIMIZATION: Remove devDependencies (TypeScript, etc.) to shrink the final image
+RUN npm prune --production
+
+# 2. Runner Stage (Production)
+FROM base AS runner
+# Set production environment ONLY here (so build stage can still access dev tools)
+ENV NODE_ENV=production
+
+# Install runtime dependencies: vips (for images) and curl (for healthchecks)
+RUN apk add --no-cache vips-dev curl
+
+WORKDIR /opt/app
+
+# Copy only production node_modules and built artifacts
+COPY --from=build /opt/app/node_modules ./node_modules
+COPY --from=build /opt/app/dist ./dist
+COPY --from=build /opt/app/public ./public
+COPY --from=build /opt/app/package.json ./package.json
+COPY --from=build /opt/app/favicon.png ./favicon.png
+
 EXPOSE 1337
 
-# Start the application
 CMD ["npm", "run", "start"]
