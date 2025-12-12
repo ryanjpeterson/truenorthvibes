@@ -5,12 +5,12 @@
 # --- Stage 1: Builder ---
 FROM node:20-alpine AS builder
 
-# Install build dependencies
-RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git
+# Install build dependencies (Python/GCC needed for node-gyp if sqlite is present)
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git python3
 
 WORKDIR /opt/app
 
-# Install dependencies (including devDependencies for building)
+# Install dependencies
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci
 
@@ -22,24 +22,28 @@ RUN npm run build
 # --- Stage 2: Runner ---
 FROM node:20-alpine AS runner
 
-# Install ONLY runtime dependencies
-# 'curl' is added for your healthcheck
+# Install runtime dependencies (vips-dev for Sharp, curl for Healthcheck)
 RUN apk add --no-cache vips-dev curl
 
 WORKDIR /opt/app
 
 ENV NODE_ENV=production
 
-# Copy built artifacts from the 'builder' stage
+# Copy artifacts
+# 1. The compiled server code
 COPY --from=builder /opt/app/dist ./dist
+# 2. The compiled Admin Panel (CRITICAL)
+COPY --from=builder /opt/app/build ./build
+# 3. Public assets
 COPY --from=builder /opt/app/public ./public
 COPY --from=builder /opt/app/favicon.png ./favicon.png
+# 4. Package files
 COPY --from=builder /opt/app/package.json ./package.json
 COPY --from=builder /opt/app/package-lock.json ./package-lock.json
 
-# Install ONLY production dependencies to keep image small
-# We explicitly install 'pg' as you did before
-RUN npm ci --omit=dev && npm install pg
+# Install production dependencies
+# We use --ignore-scripts to prevent better-sqlite3 from trying to build if it's still there
+RUN npm ci --omit=dev --ignore-scripts && npm install pg
 
 EXPOSE 1337
 
