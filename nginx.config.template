@@ -14,6 +14,10 @@ server {
 
     client_max_body_size 100M;
 
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
     # Backend Proxy (Dynamic Port managed by deploy.sh)
     location /uploads/ {
         proxy_pass http://localhost:1337/uploads/;
