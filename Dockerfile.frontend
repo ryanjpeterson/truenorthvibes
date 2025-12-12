@@ -1,47 +1,61 @@
 # -----------------------------------------------------------------------------
-# Service: Next.js 16 Frontend (Runtime Build Strategy)
+# Service: Next.js 16 Frontend (Optimized Multi-Stage)
 # Location: /Dockerfile.frontend
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS base
 
-# Install libc6-compat, curl, and vips-dev (for Sharp image optimization)
-RUN apk add --no-cache libc6-compat curl vips-dev
-
+# 1. Dependencies Stage
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# --- Dependencies Stage ---
+# Copy package files
 COPY frontend/package.json frontend/package-lock.json ./
-# Clean cache and install dependencies
-RUN npm cache clean --force && npm ci || npm install
 
-# --- Runner Stage ---
+# Install dependencies
+RUN npm ci
+
+# 2. Builder Stage
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ .
 
 # Build Arguments
 ARG NEXT_PUBLIC_STRAPI_URL
 ARG NEXT_PUBLIC_SITE_NAME
 ARG STRAPI_INTERNAL_URL
-ARG NEXT_PUBLIC_SITE_URL  # <--- ADD THIS
+ARG NEXT_PUBLIC_SITE_URL
 
 ENV NEXT_PUBLIC_STRAPI_URL=${NEXT_PUBLIC_STRAPI_URL}
 ENV NEXT_PUBLIC_SITE_NAME=${NEXT_PUBLIC_SITE_NAME}
 ENV STRAPI_INTERNAL_URL=${STRAPI_INTERNAL_URL}
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 
-# Copy the startup script and make it executable
-COPY frontend/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+# Build the application
+RUN npm run build
 
-# Create the user
+# 3. Runner Stage (Production)
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# CRITICAL FIX: Give the 'nextjs' user permission to write to /app
-RUN chown -R nextjs:nodejs /app
+# Automatically leverage output traces to reduce image size
+# Copy only the standalone output and the static assets
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Ensure the correct user permissions
 USER nextjs
 
 EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-# Use the startup script as the entrypoint
-CMD ["/app/start.sh"]
+# Start the standalone server
+CMD ["node", "server.js"]
