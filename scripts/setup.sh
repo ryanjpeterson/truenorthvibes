@@ -9,15 +9,15 @@ else
   exit 1
 fi
 
-echo "🚀 Setting up server for: $DOMAIN_NAME"
+echo "🚀 Setting up server for: $DOMAIN_NAME ($APP_NAME)"
 
 # 2. Generate Nginx Config from Template
-# (This is the command you asked about)
 echo "⚙️  Generating Nginx configuration..."
-envsubst '${DOMAIN_NAME}' < nginx.config.template > nginx.config
+# CRITICAL FIX: Explicitly list all variables for envsubst to replace.
+# This prevents Nginx from seeing ${BACKEND_PORT_BLUE} as an internal Nginx variable.
+envsubst '${DOMAIN_NAME} ${BACKEND_PORT_BLUE} ${FRONTEND_PORT_BLUE}' < nginx.config.template > nginx.config
 
 # 3. Install Nginx Config to System Directory
-# We use the DOMAIN_NAME var to name the file in /etc/nginx/sites-available/
 DEST_PATH="/etc/nginx/sites-available/${DOMAIN_NAME}"
 
 echo "📋 Copying config to $DEST_PATH..."
@@ -36,4 +36,4 @@ echo "✨ Testing Nginx configuration..."
 sudo nginx -t
 sudo systemctl reload nginx
 
-echo "✅ Setup complete! You can now run ./deploy.sh"
+echo "✅ Setup complete! You can now run ./scripts/deploy.sh"
