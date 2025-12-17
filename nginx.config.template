@@ -18,9 +18,10 @@ server {
     add_header X-Content-Type-Options "nosniff";
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
-    # Backend Proxy (Dynamic Port managed by deploy.sh)
+    # Backend Proxy (Strapi)
+    # Uses ${BACKEND_PORT_BLUE} to initialize with the default Blue port
     location /uploads/ {
-        proxy_pass http://localhost:1337/uploads/;
+        proxy_pass http://localhost:${BACKEND_PORT_BLUE}/uploads/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -29,7 +30,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://localhost:1337/api/;
+        proxy_pass http://localhost:${BACKEND_PORT_BLUE}/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -38,7 +39,7 @@ server {
     }
 
     location ~ ^/(admin|content-manager|content-type-builder|upload|users-permissions|i18n) {
-        proxy_pass http://localhost:1337;
+        proxy_pass http://localhost:${BACKEND_PORT_BLUE};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -49,9 +50,10 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # Frontend Proxy (Dynamic Port managed by deploy.sh)
+    # Frontend Proxy (Next.js)
+    # Uses ${FRONTEND_PORT_BLUE} to initialize with the default Blue port
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:${FRONTEND_PORT_BLUE};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
