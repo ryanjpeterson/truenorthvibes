@@ -8,14 +8,19 @@ if [[ "$1" == "--force" ]]; then
 fi
 
 # 1. LOAD ENV VARS FIRST
-# This must happen before you use $DOMAIN_NAME below
+# This must happen before you use $DOMAIN_NAME or $APP_NAME
 if [ -f .env ]; then
   export $(grep -v '^#' .env | xargs)
 fi
 
-# 2. Check if DOMAIN_NAME is set (Safety check)
+# 2. Safety Checks
 if [ -z "$DOMAIN_NAME" ]; then
   echo "❌ Error: DOMAIN_NAME is empty. Check your .env file."
+  exit 1
+fi
+
+if [ -z "$APP_NAME" ]; then
+  echo "❌ Error: APP_NAME is empty. Check your .env file."
   exit 1
 fi
 
@@ -64,51 +69,66 @@ deploy_service() {
     local SERVICE_NAME=$1
     local PORT_BLUE=$2
     local PORT_GREEN=$3
-    local NGINX_REGEX=$4
 
-    echo "🚀 Preparing to deploy $SERVICE_NAME..."
+    # Define the specific container names for this project to avoid conflicts
+    # with other projects running on the same server.
+    local CONTAINER_BLUE="${APP_NAME}-${SERVICE_NAME}-blue"
+    local CONTAINER_GREEN="${APP_NAME}-${SERVICE_NAME}-green"
 
-    # Determine Active Color
-    if docker ps --format '{{.Names}}' | grep -q "${SERVICE_NAME}-blue"; then
+    echo "🚀 Preparing to deploy $SERVICE_NAME for $APP_NAME..."
+
+    # Determine Active Color using the specific container name
+    # We grep for the exact container name anchor to avoid partial matches
+    if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_BLUE}$"; then
         CURRENT_COLOR="blue"
+        CURRENT_PORT="$PORT_BLUE"
+        
         TARGET_COLOR="green"
         TARGET_PORT="$PORT_GREEN"
+        TARGET_CONTAINER="$CONTAINER_GREEN"
     else
         CURRENT_COLOR="green"
+        CURRENT_PORT="$PORT_GREEN"
+        
         TARGET_COLOR="blue"
         TARGET_PORT="$PORT_BLUE"
+        TARGET_CONTAINER="$CONTAINER_BLUE"
     fi
 
-    echo "   🔵 Current Active: $CURRENT_COLOR"
+    echo "   🔵 Current Active: $CURRENT_COLOR (Port $CURRENT_PORT)"
     echo "   🟢 Deploying To:   $TARGET_COLOR (Port $TARGET_PORT)"
 
     # Build and Start Target
-    echo "   🏗️  Building ${SERVICE_NAME}-${TARGET_COLOR}..."
+    echo "   🏗️  Building ${TARGET_CONTAINER}..."
     
-    # NOTE: STRAPI_INTERNAL_URL is picked up from the environment export below
+    # We use the SERVICE NAME (e.g. backend-green) for docker compose commands.
+    # Docker Compose maps this to the 'container_name' defined in yaml.
     docker compose up -d --build --no-deps "${SERVICE_NAME}-${TARGET_COLOR}"
 
     # Wait for Health
     echo "   ⏳ Waiting for health check..."
     LAST_LOG_TIME="0s"
     
-    while [ "$(docker inspect -f '{{.State.Health.Status}}' "${SERVICE_NAME}-${TARGET_COLOR}")" != "healthy" ]; do
+    # We inspect the actual TARGET_CONTAINER name (e.g. project_a-backend-green)
+    while [ "$(docker inspect -f '{{.State.Health.Status}}' "$TARGET_CONTAINER")" != "healthy" ]; do
         # Stream logs to see progress
-        docker logs "${SERVICE_NAME}-${TARGET_COLOR}" --since "$LAST_LOG_TIME" 2>&1 | tail -n 5
+        docker logs "$TARGET_CONTAINER" --since "$LAST_LOG_TIME" 2>&1 | tail -n 5
         LAST_LOG_TIME="5s"
 
-        if [ "$(docker inspect -f '{{.State.Running}}' "${SERVICE_NAME}-${TARGET_COLOR}")" == "false" ]; then
+        if [ "$(docker inspect -f '{{.State.Running}}' "$TARGET_CONTAINER")" == "false" ]; then
             echo "   ❌ ERROR: Container died during startup."
-            docker logs "${SERVICE_NAME}-${TARGET_COLOR}"
+            docker logs "$TARGET_CONTAINER"
             exit 1
         fi
         sleep 5
     done
 
-    echo "   ✅ ${SERVICE_NAME}-${TARGET_COLOR} is Healthy!"
+    echo "   ✅ ${TARGET_CONTAINER} is Healthy!"
 
-    local SED_CMD="s/${NGINX_REGEX}/localhost:${TARGET_PORT}/g"
-    sudo sed -i "$SED_CMD" "$NGINX_REGEX_PATH"
+    # Switch Ports in Nginx
+    # Replaces "localhost:OLD_PORT" with "localhost:NEW_PORT" globally in the config
+    local SED_CMD="s/localhost:${CURRENT_PORT}/localhost:${TARGET_PORT}/g"
+    sudo sed -i "$SED_CMD" "$NGINX_CONFIG_PATH"
 
     eval "${SERVICE_NAME}_TARGET_COLOR=${TARGET_COLOR}"
     eval "${SERVICE_NAME}_CURRENT_COLOR=${CURRENT_COLOR}"
@@ -118,6 +138,7 @@ deploy_service() {
 
 echo "============================================"
 echo "🚀 STARTING SMART ZERO-DOWNTIME DEPLOYMENT"
+echo "   App: $APP_NAME | Domain: $DOMAIN_NAME"
 echo "============================================"
 
 echo "🗄️  Ensuring Database is up..."
@@ -132,16 +153,19 @@ ACTIVE_BACKEND_COLOR=""
 
 if has_changed "backend" "backend/"; then
     echo "📦 Changes detected in Backend. Deploying..."
-    NGINX_REGEX_PATH=$NGINX_CONFIG_PATH
-    deploy_service "backend" "1337" "1338" "localhost:133[7-8]"
+    
+    # Pass dynamic ports from .env
+    deploy_service "backend" "$BACKEND_PORT_BLUE" "$BACKEND_PORT_GREEN"
+    
     update_deploy_state "backend"
     DEPLOYED_BACKEND=true
     # The active color is now the target of the deployment
     ACTIVE_BACKEND_COLOR=$backend_TARGET_COLOR
 else
     echo "zzz No changes in Backend. Skipping."
-    # Detect which backend is CURRENTLY running so we can link the frontend to it
-    if docker ps --format '{{.Names}}' | grep -q "backend-blue"; then
+    
+    # Check for the namespaced container to see which is active
+    if docker ps --format '{{.Names}}' | grep -q "^${APP_NAME}-backend-blue$"; then
         ACTIVE_BACKEND_COLOR="blue"
     else
         ACTIVE_BACKEND_COLOR="green"
@@ -153,6 +177,8 @@ fi
 # CRITICAL: SET BACKEND URL
 # ----------------------------
 # This variable is passed to docker-compose so the frontend knows who to talk to
+# Note: Internal Docker DNS still uses the service name (backend-blue), 
+# not the container name, so we don't prepend APP_NAME here.
 export STRAPI_INTERNAL_URL="http://backend-${ACTIVE_BACKEND_COLOR}:1337"
 echo "🔗 Frontend will connect to: $STRAPI_INTERNAL_URL"
 
@@ -163,8 +189,10 @@ echo "🔗 Frontend will connect to: $STRAPI_INTERNAL_URL"
 DEPLOYED_FRONTEND=false
 if has_changed "frontend" "frontend/"; then
     echo "📦 Changes detected in Frontend. Deploying..."
-    NGINX_REGEX_PATH=$NGINX_CONFIG_PATH
-    deploy_service "frontend" "3000" "3001" "localhost:300[0-1]"
+    
+    # Pass dynamic ports from .env
+    deploy_service "frontend" "$FRONTEND_PORT_BLUE" "$FRONTEND_PORT_GREEN"
+    
     update_deploy_state "frontend"
     DEPLOYED_FRONTEND=true
 else
@@ -194,7 +222,8 @@ cleanup() {
     local CURRENT=$3
     
     if [ "$TARGET" != "$CURRENT" ] && [ ! -z "$CURRENT" ]; then
-        echo "🛑 Stopping old container: ${SERVICE}-${CURRENT}"
+        echo "🛑 Stopping old container: ${APP_NAME}-${SERVICE}-${CURRENT}"
+        # Docker Compose stop uses the service name
         docker compose stop "${SERVICE}-${CURRENT}" || true
     fi
 }
