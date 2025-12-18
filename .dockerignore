@@ -1,0 +1,18 @@
+# Ignore git
+.git
+.gitignore
+
+# Ignore local dependencies and builds
+node_modules
+build
+dist
+.cache
+.tmp
+
+# Ignore potential env files
+.env
+.env.*
+
+# Docker related
+Dockerfile*
+docker-compose*

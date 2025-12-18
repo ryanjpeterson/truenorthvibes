@@ -1,34 +1,52 @@
 # -----------------------------------------------------------------------------
 # Service: Strapi 5 Backend
-# Location: /Dockerfile.backend (Root Directory)
+# Location: /Dockerfile.backend
 # -----------------------------------------------------------------------------
-FROM node:20-alpine
 
-# Install system dependencies required by Strapi/Sharp
-# libvips-dev is crucial for image processing in Strapi
-# ADDED: curl (Required for Docker Healthchecks in deploy.sh)
-RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git curl
+# --- Stage 1: Build ---
+FROM node:20-alpine AS build
+
+# Install build tools
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git
 
 WORKDIR /opt/app
 
-# Copy package files first to leverage cache
+# Install dependencies
 COPY backend/package.json backend/package-lock.json ./
+RUN npm ci && npm install pg
 
-# Clean npm cache to prevent EINTEGRITY errors from corrupted downloads
-RUN npm cache clean --force
-
-# 1. Install dependencies (Try 'ci' for speed, fallback to 'install' to fix lockfile issues)
-# 2. Explicitly install 'pg' (Postgres driver) because it's missing from the SQLite-based package.json
-RUN (npm ci || npm install) && npm install pg
-
-# Copy the rest of the application code
+# Copy source code
 COPY backend/ .
 
-# Build Strapi admin panel
+# Build the application (compiles TS to dist/ and builds Admin panel)
 RUN npm run build
 
-# Expose the Strapi port
-EXPOSE 1337
+# --- Stage 2: Production ---
+FROM node:20-alpine
 
-# Start the application
+# Install runtime dependencies only
+RUN apk add --no-cache vips curl
+
+WORKDIR /opt/app
+ENV NODE_ENV=production
+
+# Install production dependencies
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci --only=production && npm install pg && npm cache clean --force
+
+# --- CRITICAL FIX ---
+# Copy the COMPILED files from 'dist' directly to the ROOT.
+# This places 'config/database.js' exactly where Strapi expects it.
+COPY --from=build /opt/app/dist ./
+
+# Copy static assets (public folder and favicon)
+COPY --from=build /opt/app/public ./public
+COPY --from=build /opt/app/favicon.png ./favicon.png
+
+# (Optional) If your custom Admin panel build is not in 'dist', you might need to copy it too.
+# Usually, Strapi 5 puts it in 'dist' or 'build'. If the admin panel 404s, uncomment the next line:
+# COPY --from=build /opt/app/build ./build
+
+# Expose port and start
+EXPOSE 1337
 CMD ["npm", "run", "start"]
