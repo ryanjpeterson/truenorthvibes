@@ -2,7 +2,6 @@ services:
   # 1. Database (Postgres)
   postgres:
     image: postgres:16-alpine
-    # UPDATED: Dynamic container name to allow multiple DBs on one server
     container_name: ${APP_NAME}-postgres
     hostname: postgres
     restart: unless-stopped
@@ -14,8 +13,20 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
+    # SECURITY NOTE: Relaxed for Postgres initialization. 
+    # The DB is protected by being internal to the 'app-network'.
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # FIXED: Using internal container variables ($$ prefix) for robustness
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME}"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,7 +36,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    # UPDATED: Dynamic container name
     container_name: ${APP_NAME}-backend-blue
     restart: always
     depends_on:
@@ -48,13 +58,26 @@ services:
       PUBLIC_URL: ${NEXT_PUBLIC_STRAPI_URL}
       HOST: 0.0.0.0
       PORT: 1337
-    # UPDATED: Dynamic Host Port
     ports:
       - "127.0.0.1:${BACKEND_PORT_BLUE}:1337"
     volumes:
       - ./backend/public:/opt/app/public
     networks:
       - app-network
+    # HARDENING: Retained for the public-facing backend
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
       interval: 15s
@@ -67,7 +90,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-    # UPDATED: Dynamic container name
     container_name: ${APP_NAME}-backend-green
     restart: always
     depends_on:
@@ -76,13 +98,25 @@ services:
     environment:
       <<: *backend_env
       PORT: 1337
-    # UPDATED: Dynamic Host Port
     ports:
       - "127.0.0.1:${BACKEND_PORT_GREEN}:1337"
     volumes:
       - ./backend/public:/opt/app/public
     networks:
       - app-network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:1337/_health"]
       interval: 15s
@@ -100,10 +134,8 @@ services:
         NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME}
         STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
-    # UPDATED: Dynamic container name
     container_name: ${APP_NAME}-frontend-blue
     restart: always
-    # UPDATED: Dynamic Host Port
     ports:
       - "127.0.0.1:${FRONTEND_PORT_BLUE}:3000"
     environment:
@@ -111,6 +143,10 @@ services:
       STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
     networks:
       - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 10s
@@ -128,10 +164,8 @@ services:
         NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME}
         STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
-    # UPDATED: Dynamic container name
     container_name: ${APP_NAME}-frontend-green
     restart: always
-    # UPDATED: Dynamic Host Port
     ports:
       - "127.0.0.1:${FRONTEND_PORT_GREEN}:3000"
     environment:
@@ -139,6 +173,10 @@ services:
       STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
     networks:
       - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 10s
@@ -146,7 +184,6 @@ services:
       retries: 20
       start_period: 30s
 
-# --- ROOT LEVEL CONFIGURATION (Un-indented) ---
 networks:
   app-network:
     driver: bridge

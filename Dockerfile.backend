@@ -30,22 +30,21 @@ RUN apk add --no-cache vips curl
 WORKDIR /opt/app
 ENV NODE_ENV=production
 
+# Set ownership of the app directory to the node user
+# This ensures the non-root user can read/execute the application
+RUN chown -R node:node /opt/app
+
 # Install production dependencies
-COPY backend/package.json backend/package-lock.json ./
+COPY --chown=node:node backend/package.json backend/package-lock.json ./
 RUN npm ci --only=production && npm install pg && npm cache clean --force
 
-# --- CRITICAL FIX ---
-# Copy the COMPILED files from 'dist' directly to the ROOT.
-# This places 'config/database.js' exactly where Strapi expects it.
-COPY --from=build /opt/app/dist ./
+# Copy the COMPILED files and assets with correct ownership
+COPY --from=build --chown=node:node /opt/app/dist ./
+COPY --from=build --chown=node:node /opt/app/public ./public
+COPY --from=build --chown=node:node /opt/app/favicon.png ./favicon.png
 
-# Copy static assets (public folder and favicon)
-COPY --from=build /opt/app/public ./public
-COPY --from=build /opt/app/favicon.png ./favicon.png
-
-# (Optional) If your custom Admin panel build is not in 'dist', you might need to copy it too.
-# Usually, Strapi 5 puts it in 'dist' or 'build'. If the admin panel 404s, uncomment the next line:
-# COPY --from=build /opt/app/build ./build
+# Switch to the non-privileged user
+USER node
 
 # Expose port and start
 EXPOSE 1337
