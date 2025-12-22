@@ -12,9 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - app-network
-    # SECURITY NOTE: Relaxed for Postgres initialization. 
-    # The DB is protected by being internal to the 'app-network'.
+      - internal-db
     deploy:
       resources:
         limits:
@@ -24,7 +22,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    # FIXED: Using internal container variables ($$ prefix) for robustness
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -63,8 +60,8 @@ services:
     volumes:
       - ./backend/public:/opt/app/public
     networks:
-      - app-network
-    # HARDENING: Retained for the public-facing backend
+      - internal-db
+      - public-facing
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -103,7 +100,8 @@ services:
     volumes:
       - ./backend/public:/opt/app/public
     networks:
-      - app-network
+      - internal-db
+      - public-facing
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -142,7 +140,7 @@ services:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
       STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
     networks:
-      - app-network
+      - public-facing
     deploy:
       resources:
         limits:
@@ -172,7 +170,7 @@ services:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
       STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
     networks:
-      - app-network
+      - public-facing
     deploy:
       resources:
         limits:
@@ -185,8 +183,11 @@ services:
       start_period: 30s
 
 networks:
-  app-network:
+  public-facing:
     driver: bridge
+  internal-db:
+    driver: bridge
+    internal: true
 
 volumes:
   postgres_data:
