@@ -6,6 +6,16 @@ services:
     hostname: postgres
     restart: unless-stopped
     read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - FOWNER
+      - DAC_OVERRIDE
+      - SETUID # Allows switching from root to postgres user during init
+      - SETGID # Allows switching from root to postgres user during init
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
@@ -194,7 +204,6 @@ services:
     container_name: ${APP_NAME}-frontend-blue
     restart: always
     read_only: true
-    # Ensures backend is ready before frontend attempts pre-rendering
     depends_on:
       backend-blue:
         condition: service_healthy
@@ -202,7 +211,10 @@ services:
       - "127.0.0.1:${FRONTEND_PORT_BLUE}:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-      STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
+      # FIX: Use Docker service name for internal SSR communication
+      STRAPI_INTERNAL_URL: http://backend-blue:1337
+      NODE_ENV: production
+      NEXT_OTEL_VERBOSE: "0"
     volumes:
       - type: tmpfs
         target: /tmp
@@ -212,14 +224,23 @@ services:
         target: /app/.next/cache
         tmpfs:
           mode: 0777
+      - type: tmpfs
+        target: /home/nextjs
+        tmpfs:
+          mode: 0777
     networks:
       - public-facing
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
           memory: 1G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      # FIX: Silenced healthcheck logs
+      test: ["CMD", "curl", "-f", "-s", "http://localhost:3000/", "-o", "/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -238,7 +259,6 @@ services:
     container_name: ${APP_NAME}-frontend-green
     restart: always
     read_only: true
-    # Ensures green backend is ready before green frontend starts
     depends_on:
       backend-green:
         condition: service_healthy
@@ -246,7 +266,10 @@ services:
       - "127.0.0.1:${FRONTEND_PORT_GREEN}:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-      STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
+      # FIX: Use Docker service name for internal SSR communication
+      STRAPI_INTERNAL_URL: http://backend-green:1337
+      NODE_ENV: production
+      NEXT_OTEL_VERBOSE: "0"
     volumes:
       - type: tmpfs
         target: /tmp
@@ -256,14 +279,23 @@ services:
         target: /app/.next/cache
         tmpfs:
           mode: 0777
+      - type: tmpfs
+        target: /home/nextjs
+        tmpfs:
+          mode: 0777
     networks:
       - public-facing
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     deploy:
       resources:
         limits:
           memory: 1G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      # FIX: Silenced healthcheck logs
+      test: ["CMD", "curl", "-f", "-s", "http://localhost:3000/", "-o", "/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 20
