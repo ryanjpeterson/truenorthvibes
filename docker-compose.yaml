@@ -5,12 +5,23 @@ services:
     container_name: ${APP_NAME}-postgres
     hostname: postgres
     restart: unless-stopped
+    read_only: true
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Persistent Volume for Data
+      - postgres_data:/var/lib/postgresql/data:rw
+      # Long syntax tmpfs mounts ensure proper permissions for the postgres user
+      - type: tmpfs
+        target: /var/run/postgresql
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 0777
     networks:
       - internal-db
     deploy:
@@ -35,6 +46,7 @@ services:
       dockerfile: Dockerfile.backend
     container_name: ${APP_NAME}-backend-blue
     restart: always
+    read_only: true
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,10 +67,35 @@ services:
       PUBLIC_URL: ${NEXT_PUBLIC_STRAPI_URL}
       HOST: 0.0.0.0
       PORT: 1337
+      npm_config_cache: /tmp/.npm
     ports:
       - "127.0.0.1:${BACKEND_PORT_BLUE}:1337"
     volumes:
-      - ./backend/public:/opt/app/public
+      # Persistent Volume for Uploads
+      - ./backend/public/uploads:/opt/app/public/uploads:rw
+      # Read-Only Static Files
+      - ./backend/public:/opt/app/public:ro
+      # Tmpfs Mounts with 0777 mode for Strapi 5 runtime writes
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /opt/app/.tmp
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /opt/app/node_modules/.cache
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /opt/app/database
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /home/node
+        tmpfs:
+          mode: 0777
     networks:
       - internal-db
       - public-facing
@@ -89,6 +126,7 @@ services:
       dockerfile: Dockerfile.backend
     container_name: ${APP_NAME}-backend-green
     restart: always
+    read_only: true
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,7 +136,28 @@ services:
     ports:
       - "127.0.0.1:${BACKEND_PORT_GREEN}:1337"
     volumes:
-      - ./backend/public:/opt/app/public
+      - ./backend/public/uploads:/opt/app/public/uploads:rw
+      - ./backend/public:/opt/app/public:ro
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /opt/app/.tmp
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /opt/app/node_modules/.cache
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /opt/app/database
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /home/node
+        tmpfs:
+          mode: 0777
     networks:
       - internal-db
       - public-facing
@@ -134,11 +193,25 @@ services:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     container_name: ${APP_NAME}-frontend-blue
     restart: always
+    read_only: true
+    # Ensures backend is ready before frontend attempts pre-rendering
+    depends_on:
+      backend-blue:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${FRONTEND_PORT_BLUE}:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
       STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
+    volumes:
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /app/.next/cache
+        tmpfs:
+          mode: 0777
     networks:
       - public-facing
     deploy:
@@ -164,11 +237,25 @@ services:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     container_name: ${APP_NAME}-frontend-green
     restart: always
+    read_only: true
+    # Ensures green backend is ready before green frontend starts
+    depends_on:
+      backend-green:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${FRONTEND_PORT_GREEN}:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
       STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL}
+    volumes:
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 0777
+      - type: tmpfs
+        target: /app/.next/cache
+        tmpfs:
+          mode: 0777
     networks:
       - public-facing
     deploy:
@@ -183,8 +270,10 @@ services:
       start_period: 30s
 
 networks:
+  # Network for frontend and backend communication
   public-facing:
     driver: bridge
+  # Isolated network for backend and database communication
   internal-db:
     driver: bridge
     internal: true
