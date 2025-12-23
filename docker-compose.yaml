@@ -83,8 +83,8 @@ services:
     volumes:
       # Persistent Volume for Uploads
       - ./backend/public/uploads:/opt/app/public/uploads:rw
-      # Read-Only Static Files
-      - ./backend/public:/opt/app/public:ro
+      # FIX: Changed from :ro to :rw to allow Strapi 5 to create temporary backup folders during 'import'
+      - ./backend/public:/opt/app/public:rw
       # Tmpfs Mounts with 0777 mode for Strapi 5 runtime writes
       - type: tmpfs
         target: /tmp
@@ -147,7 +147,8 @@ services:
       - "127.0.0.1:${BACKEND_PORT_GREEN}:1337"
     volumes:
       - ./backend/public/uploads:/opt/app/public/uploads:rw
-      - ./backend/public:/opt/app/public:ro
+      # FIX: Changed from :ro to :rw to allow Strapi 5 to create temporary backup folders during 'import'
+      - ./backend/public:/opt/app/public:rw
       - type: tmpfs
         target: /tmp
         tmpfs:
@@ -239,7 +240,6 @@ services:
         limits:
           memory: 1G
     healthcheck:
-      # FIX: Silenced healthcheck logs
       test: ["CMD", "curl", "-f", "-s", "http://localhost:3000/", "-o", "/dev/null"]
       interval: 10s
       timeout: 5s
@@ -294,7 +294,6 @@ services:
         limits:
           memory: 1G
     healthcheck:
-      # FIX: Silenced healthcheck logs
       test: ["CMD", "curl", "-f", "-s", "http://localhost:3000/", "-o", "/dev/null"]
       interval: 10s
       timeout: 5s
