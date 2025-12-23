@@ -141,7 +141,7 @@ services:
     ports:
       - "127.0.0.1:${BACKEND_PORT_GREEN}:1337"
     volumes:
-      - ./backend/public:/opt/app/public:rw
+      - ./backend/public:/opt/app/public:rw # Consolidated volume
       - type: tmpfs
         target: /tmp
         tmpfs:
