@@ -55,6 +55,4 @@ The frontend is a performance-optimized React application utilizing Server-Side 
 
 * **HTTPS & SSL Hardening**: Enforces HTTPS and uses modern TLS protocols (`v1.2` and `v1.3`) with session caching for performance.  
 * **Security Headers**: Implements `HSTS`, `X-Frame-Options`, and a custom `Content-Security-Policy` that allows YouTube embeds while blocking unauthorized scripts.  
-* **Centralized Routing**: Acts as the single entry point, proxying traffic to the appropriate frontend or backend containers while hiding the underlying container ports from the public.  
-* 
-
+* **Centralized Routing**: Acts as the single entry point, proxying traffic to the appropriate frontend or backend containers while hiding the underlying container ports from the public.
