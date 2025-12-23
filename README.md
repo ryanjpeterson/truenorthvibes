@@ -15,11 +15,11 @@ The backend serves as a headless CMS, utilizing custom lifecycle hooks to optimi
 
 The frontend is a performance-optimized React application utilizing Server-Side Rendering (SSR) and Incremental Static Regeneration (ISR).
 
-* **Core Utilities & Networking (`lib/`)**:  
+#### **Core Utilities & Networking (`lib/`)**:  
 * **Environment-Aware Networking**: The `strapi.ts` utility manages two URLs: `STRAPI_URL` for client-side browser requests and `STRAPI_INTERNAL_URL` for server-side requests within the Docker network.  
 * **Resilient `fetchAPI`**: This wrapper standardizes API calls, implementing a mandatory 5-second timeout and detailed error logging.  
 * **Fault Tolerance**: During SSR, `fetchAPI` returns empty fallback data instead of crashing the site if the CMS is temporarily unreachable.  
-* **Type System & Data Contracts (`types/`)**:  
+#### **Type System & Data Contracts (`types/`)**:  
 * **Interface Mapping**: The `types/index.ts` file mirrors the Strapi data model, providing type safety for `Post`, `Sponsor`, and `Category` objects.  
 * **Dynamic Component Modeling**: The `Block` interface enables the layout engine to handle various content types within the dynamic body zone.  
 * **API Standardization**: The `StrapiResponse<T>` generic interface ensures every API response has a predictable structure for data and pagination.  
