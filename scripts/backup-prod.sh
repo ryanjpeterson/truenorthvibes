@@ -9,9 +9,9 @@ else
 fi
 
 # --- Configuration ---
-VPS_USER="${VPS_USER:-debian}"
-VPS_HOST="${VPS_HOST:-vibes.ryanjpeterson.dev}"
-VPS_PORT="${VPS_PORT:-22}"
+VPS_USER="${VPS_USER}"
+VPS_HOST="${VPS_HOST}"
+VPS_PORT="${VPS_PORT}"
 
 # Local directory where files will be saved
 LOCAL_BACKUP_DIR="./backend/backups"
