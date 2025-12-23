@@ -14,16 +14,14 @@ services:
       - CHOWN
       - FOWNER
       - DAC_OVERRIDE
-      - SETUID # Allows switching from root to postgres user during init
-      - SETGID # Allows switching from root to postgres user during init
+      - SETUID
+      - SETGID
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
     volumes:
-      # Persistent Volume for Data
       - postgres_data:/var/lib/postgresql/data:rw
-      # Long syntax tmpfs mounts ensure proper permissions for the postgres user
       - type: tmpfs
         target: /var/run/postgresql
         tmpfs:
@@ -56,7 +54,7 @@ services:
       dockerfile: Dockerfile.backend
     container_name: ${APP_NAME}-backend-blue
     restart: always
-    read_only: true
+    read_only: false # Set to false to allow Strapi 5 import/migration logic
     depends_on:
       postgres:
         condition: service_healthy
@@ -81,11 +79,8 @@ services:
     ports:
       - "127.0.0.1:${BACKEND_PORT_BLUE}:1337"
     volumes:
-      # Persistent Volume for Uploads
-      - ./backend/public/uploads:/opt/app/public/uploads:rw
-      # Read-Only Static Files
-      - ./backend/public:/opt/app/public:ro
-      # Tmpfs Mounts with 0777 mode for Strapi 5 runtime writes
+      # Consolidated volume to allow renames within the same mount point
+      - ./backend/public:/opt/app/public:rw
       - type: tmpfs
         target: /tmp
         tmpfs:
@@ -136,7 +131,7 @@ services:
       dockerfile: Dockerfile.backend
     container_name: ${APP_NAME}-backend-green
     restart: always
-    read_only: true
+    read_only: false
     depends_on:
       postgres:
         condition: service_healthy
@@ -146,8 +141,7 @@ services:
     ports:
       - "127.0.0.1:${BACKEND_PORT_GREEN}:1337"
     volumes:
-      - ./backend/public/uploads:/opt/app/public/uploads:rw
-      - ./backend/public:/opt/app/public:ro
+      - ./backend/public:/opt/app/public:rw
       - type: tmpfs
         target: /tmp
         tmpfs:
@@ -211,10 +205,8 @@ services:
       - "127.0.0.1:${FRONTEND_PORT_BLUE}:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-      # FIX: Use Docker service name for internal SSR communication
       STRAPI_INTERNAL_URL: http://backend-blue:1337
       NODE_ENV: production
-      NEXT_OTEL_VERBOSE: "0"
     volumes:
       - type: tmpfs
         target: /tmp
@@ -239,7 +231,6 @@ services:
         limits:
           memory: 1G
     healthcheck:
-      # FIX: Silenced healthcheck logs
       test: ["CMD", "curl", "-f", "-s", "http://localhost:3000/", "-o", "/dev/null"]
       interval: 10s
       timeout: 5s
@@ -266,10 +257,8 @@ services:
       - "127.0.0.1:${FRONTEND_PORT_GREEN}:3000"
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
-      # FIX: Use Docker service name for internal SSR communication
       STRAPI_INTERNAL_URL: http://backend-green:1337
       NODE_ENV: production
-      NEXT_OTEL_VERBOSE: "0"
     volumes:
       - type: tmpfs
         target: /tmp
@@ -294,7 +283,6 @@ services:
         limits:
           memory: 1G
     healthcheck:
-      # FIX: Silenced healthcheck logs
       test: ["CMD", "curl", "-f", "-s", "http://localhost:3000/", "-o", "/dev/null"]
       interval: 10s
       timeout: 5s
@@ -302,10 +290,8 @@ services:
       start_period: 30s
 
 networks:
-  # Network for frontend and backend communication
   public-facing:
     driver: bridge
-  # Isolated network for backend and database communication
   internal-db:
     driver: bridge
     internal: true
