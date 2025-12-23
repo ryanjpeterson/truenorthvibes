@@ -4,7 +4,7 @@
 # -----------------------------------------------------------------------------
 
 # --- Stage 1: Build ---
-FROM node:20-alpine AS build
+FROM node:20.18.1-alpine3.20 AS build
 
 # Install build tools
 RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev nasm bash vips-dev git
